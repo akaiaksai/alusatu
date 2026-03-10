@@ -5,35 +5,53 @@
 .container h3 {
   margin: 0 0 1rem;
   font-size: 1.1rem;
-  color: #000;
+  color: var(--text-primary);
 }
 
 .btns {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .categoryBtn {
-  padding: 10px 16px;
-  border: 2px solid #000;
-  border-radius: 6px;
-  color: #000;
-  background-color: #fff;
+  padding: 8px 16px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  background-color: var(--bg-card);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   font-weight: 500;
+  font-size: 0.9rem;
+}
+
+[data-theme="light"] .categoryBtn {
+  box-shadow: var(--shadow-soft);
 }
 
 .categoryBtn:hover {
-  border-color: #000;
-  background: #f0f0f0;
+  border-color: var(--border-light);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+}
+
+[data-theme="light"] .categoryBtn:hover {
+  box-shadow: var(--shadow-card);
 }
 
 .categoryBtn.active {
   background-color: #000;
-  color: white;
+  color: #fff;
   border-color: #000;
+  transform: scale(1.05);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+
+[data-theme="light"] .categoryBtn.active {
+  box-shadow: var(--shadow-card);
 }
 
 @media (max-width: 900px) {
@@ -68,17 +86,28 @@
 
   .btns {
     gap: 6px;
-    flex-wrap: wrap;
-    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .btns::-webkit-scrollbar {
+    height: 3px;
+  }
+
+  .btns::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 10px;
   }
 
   .categoryBtn {
-    padding: 6px 10px;
-    font-size: 0.85rem;
-    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    border-radius: 16px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex: 0 0 auto;
   }
 }
 
@@ -94,30 +123,13 @@
 
   .btns {
     gap: 4px;
-    overflow-x: auto;
-    padding-bottom: 6px;
-    scroll-behavior: smooth;
-  }
-
-  .btns::-webkit-scrollbar {
-    height: 3px;
-  }
-
-  .btns::-webkit-scrollbar-track {
-    background: #f0f0f0;
-    border-radius: 10px;
-  }
-
-  .btns::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 10px;
+    padding-bottom: 4px;
   }
 
   .categoryBtn {
-    padding: 5px 8px;
+    padding: 5px 10px;
     font-size: 0.75rem;
-    flex: 0 0 auto;
+    border-radius: 14px;
     border-width: 1px;
-    border-radius: 3px;
   }
 }

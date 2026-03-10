@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import styles from "./ProductCard.module.css";
 import formatPrice from "../../utils/formatPrice";
-
-const FAVORITES_KEY = "favorites";
+import { useToast } from "../Toast/Toast";
+import { useAuth, useCart, useFavorites } from "../../store";
+import { useTranslation } from "../../i18n";
+import { translateProduct } from "../../utils/productTranslation";
 
 const getCategoryFallbackImage = (category, seed) => {
   const c = (category || "").toLowerCase();
@@ -23,6 +25,12 @@ const getCategoryFallbackImage = (category, seed) => {
 };
 
 const ProductCard = ({ product }) => {
+  const toast = useToast();
+  const { user } = useAuth();
+  const { addToCart } = useCart();
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const { t } = useTranslation();
+  const tp = translateProduct(product, t);
   const isBannedImage =
     typeof product?.image === "string" &&
     (product.image.includes("/sparkle.png") || /placeholder\.com/.test(product.image));
@@ -30,56 +38,40 @@ const ProductCard = ({ product }) => {
   const productIdKey = String(product?.id);
 
   const [isHidden, setIsHidden] = useState(() => !product?.image || isBannedImage);
-  const [isFav, setIsFav] = useState(() => {
-    try {
-      const raw = localStorage.getItem(FAVORITES_KEY) || "[]";
-      const favs = JSON.parse(raw);
-      return (favs || []).some((x) => String(x) === productIdKey);
-    } catch {
-      return false;
-    }
-  });
+  const [isFav, setIsFav] = useState(() => isFavorite(product?.id));
 
   const [imgSrc, setImgSrc] = useState(() => (isBannedImage ? "" : product.image));
   const [, setImgAttempt] = useState(0);
 
-  const toggleFavorite = () => {
-    try {
-      const raw = localStorage.getItem(FAVORITES_KEY) || "[]";
-      const favs = JSON.parse(raw) || [];
-
-      const has = favs.some((x) => String(x) === productIdKey);
-      let next;
-      if (has) {
-        next = favs.filter((x) => String(x) !== productIdKey);
-        setIsFav(false);
-      } else {
-        next = [...favs, product.id];
-        setIsFav(true);
-      }
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
-      window.dispatchEvent(new CustomEvent("favorites:changed"));
-    } catch (err) {
-      console.error("Failed to toggle favorite", err);
+  const handleToggleFavorite = () => {
+    if (!user) {
+      toast(t("productCard.loginForFavorite"), "error");
+      return;
+    }
+    const added = toggleFavorite(product.id);
+    setIsFav(added);
+    if (added) {
+      toast(t("productCard.addedToFav"), "success");
+    } else {
+      toast(t("productCard.removedFromFav"), "info");
     }
   };
 
-  const addToCart = () => {
-    try {
-      const raw = localStorage.getItem("cart") || "[]";
-      const cart = JSON.parse(raw);
-      const existing = (cart || []).find((item) => String(item?.id) === productIdKey);
-      if (existing) {
-        existing.quantity += 1;
-      } else {
-        cart.push({ ...product, quantity: 1 });
-      }
-      localStorage.setItem("cart", JSON.stringify(cart));
-      window.dispatchEvent(new CustomEvent("cart:changed"));
-      alert(`${product.name} добавлен в корзину!`);
-    } catch (err) {
-      console.error("Failed to add to cart", err);
+  const handleAddToCart = () => {
+    if (!user) {
+      toast(t("productCard.loginForCart"), "error");
+      return;
     }
+    if (product.sold) {
+      toast(t("productCard.alreadySold"), "error");
+      return;
+    }
+    const result = addToCart(product, 1);
+    if (result === "ALREADY_IN_CART") {
+      toast(t("productCard.alreadyInCart"), "info");
+      return;
+    }
+    toast(`${tp.name} ${t("productCard.addedToCart")}`, "success");
   };
 
   const handleImageError = () => {
@@ -102,31 +94,73 @@ const ProductCard = ({ product }) => {
 
   if (isHidden) return null;
 
+  const discountPercent = product.discountPercentage ? Math.round(product.discountPercentage) : 0;
+  const isNew = product.id && (typeof product.id === "number" ? product.id % 7 === 0 : false);
+
   return (
-    <div className={styles.card}>
-      <img
-        src={imgSrc}
-        alt={product.name}
-        className={styles.image}
-        loading="lazy"
-        onError={handleImageError}
-      />
-      <h3 className={styles.name}>{product.name}</h3>
-      {product.description && (
-        <p className={styles.preview}>
-          {product.description.slice(0, 100)}
-          {product.description.length > 100 ? "..." : ""}
-        </p>
-      )}
-      <p className={styles.price}>{formatPrice(product.price)}</p>
+    <div className={`${styles.card} card-reveal`}>
+      <div className={styles.imageWrap}>
+        <div className={styles.badges}>
+          {product.sold && (
+            <span className={styles.badgeSold}>{t("productCard.sold")}</span>
+          )}
+          {discountPercent > 0 && (
+            <span className={styles.badgeSale}>-{discountPercent}%</span>
+          )}
+          {isNew && <span className={styles.badgeNew}>New</span>}
+        </div>
+
+        <img
+          src={imgSrc}
+          alt={tp.name}
+          className={styles.image}
+          loading="lazy"
+          onError={handleImageError}
+        />
+        <div className={styles.overlay}>
+          <button
+            type="button"
+            aria-pressed={isFav}
+            className={`${styles.overlayFav} ${isFav ? styles.overlayFavActive : ""}`}
+            onClick={handleToggleFavorite}
+            title={t("productCard.favorite")}
+          >
+            {isFav ? "★" : "☆"}
+          </button>
+
+          <Link to={`/product/${product.id}`} className={styles.overlayView} title={t("productCard.view")}>
+            {t("productCard.view")}
+          </Link>
+
+          <button
+            type="button"
+            className={styles.overlayCart}
+            onClick={handleAddToCart}
+            title={t("productCard.addToCart")}
+          >
+            {t("productCard.addToCart")}
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.details}>
+        <h3 className={styles.name}>{tp.name}</h3>
+        {tp.description && (
+          <p className={styles.preview}>
+            {tp.description.slice(0, 80)}
+            {tp.description.length > 80 ? "…" : ""}
+          </p>
+        )}
+        <p className={styles.price}>{formatPrice(product.price)}</p>
+      </div>
 
       <div className={styles.actionsTop}>
         <button
           type="button"
           aria-pressed={isFav}
           className={`${styles.favBtn} ${isFav ? styles.favActive : ""}`}
-          onClick={toggleFavorite}
-          title="Добавить в избранное"
+          onClick={handleToggleFavorite}
+          title={t("productCard.addToFavorite")}
         >
           {isFav ? "★" : "☆"}
         </button>
@@ -134,17 +168,17 @@ const ProductCard = ({ product }) => {
         <button
           type="button"
           className={styles.cartBtn}
-          onClick={addToCart}
-          aria-label="Добавить в корзину"
-          title="Добавить в корзину"
+          onClick={handleAddToCart}
+          aria-label={t("productCard.addToCart")}
+          title={t("productCard.addToCart")}
         >
-          В корзину
+          {t("productCard.addToCart")}
         </button>
       </div>
 
       <div className={styles.actionsBottom}>
-        <Link to={`/product/${product.id}`} className={styles.viewBtn} title="Посмотреть" aria-label="Посмотреть">
-          Просмотреть
+        <Link to={`/product/${product.id}`} className={styles.viewBtn} title={t("productCard.view")} aria-label={t("productCard.view")}>
+          {t("productCard.view")}
         </Link>
       </div>
     </div>

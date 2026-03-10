@@ -1,11 +1,11 @@
-const DEFAULT_RATE = 500; // KZT per 1 USD — chosen rate
+const DEFAULT_RATE = 500
 const MAX_REASONABLE_USD = 20000;
 
-export default function formatPrice(value) {
-  if (value === undefined || value === null || isNaN(Number(value))) return "";
+export function toPriceKzt(value) {
+  if (value === undefined || value === null || isNaN(Number(value))) return 0;
   const num = Number(value);
   const isProbablyKzt = num > MAX_REASONABLE_USD;
-  // read rate from localStorage if set, otherwise use default
+
   let rate = DEFAULT_RATE;
   try {
     const r = localStorage.getItem('currencyRate');
@@ -17,8 +17,18 @@ export default function formatPrice(value) {
     rate = DEFAULT_RATE;
   }
 
-  const amountKzt = Math.round(isProbablyKzt ? num : num * rate);
+  return Math.round(isProbablyKzt ? num : num * rate);
+}
+
+export default function formatPrice(value) {
+  if (value === undefined || value === null || isNaN(Number(value))) return "";
+  const amountKzt = toPriceKzt(value);
   return new Intl.NumberFormat('ru-RU').format(amountKzt) + ' ₸';
+}
+
+export function formatKzt(value) {
+  if (value === undefined || value === null || isNaN(Number(value))) return "";
+  return new Intl.NumberFormat('ru-RU').format(Math.round(Number(value))) + ' ₸';
 }
 
 export function setCurrencyRate(rate) {

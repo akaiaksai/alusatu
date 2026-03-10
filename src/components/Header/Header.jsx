@@ -1,74 +1,54 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styles from "./Header.module.css";
 import searchIcon from "../../assets/icons/search.svg";
 import cartIcon from "../../assets/icons/cart.svg";
+import { loginUser, registerUser, logout as apiLogout } from "../../api/auth.api";
+import { useAuth, useCart, useFavorites } from "../../store";
+import { useTranslation } from "../../i18n";
 
-const Header = () => {
+const LANG_OPTIONS = [
+  { code: "ru", label: "RU" },
+  { code: "en", label: "EN" },
+  { code: "kk", label: "KK" },
+];
+
+const Header = ({ theme, onToggleTheme }) => {
   const navigate = useNavigate();
-  const [cartCount, setCartCount] = useState(() => {
-    try {
-      const raw = localStorage.getItem("cart") || "[]";
-      const cart = JSON.parse(raw);
-      return (cart || []).reduce((s, item) => s + (item.quantity || 1), 0);
-    } catch {
-      return 0;
-    }
-  });
-  const [favCount, setFavCount] = useState(() => {
-    try {
-      const raw = localStorage.getItem("favorites") || "[]";
-      const favs = JSON.parse(raw);
-      return favs.length || 0;
-    } catch {
-      return 0;
-    }
-  });
+  const headerRef = useRef(null);
+  const [scrolled, setScrolled] = useState(false);
+  const { user, avatarSrc, login, logout: authLogout } = useAuth();
+  const { cartCount } = useCart();
+  const { favCount } = useFavorites();
+  const { t, lang, setLang } = useTranslation();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState("login");
-  const [user, setUser] = useState(() => {
-    try {
-      const currentUser = localStorage.getItem("currentUser");
-      return currentUser ? JSON.parse(currentUser) : null;
-    } catch {
-      return null;
-    }
-  });
   const [searchQuery, setSearchQuery] = useState("");
-
-  const updateCartCount = () => {
-    try {
-      const raw = localStorage.getItem("cart") || "[]";
-      const cart = JSON.parse(raw);
-      const count = (cart || []).reduce((s, item) => s + (item.quantity || 1), 0);
-      setCartCount(count);
-    } catch {
-      setCartCount(0);
-    }
-  };
-
-  const updateFavCount = () => {
-    try {
-      const raw = localStorage.getItem("favorites") || "[]";
-      const favs = JSON.parse(raw);
-      setFavCount(favs.length || 0);
-    } catch {
-      setFavCount(0);
-    }
-  };
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
 
   useEffect(() => {
-    window.addEventListener("cart:changed", updateCartCount);
-    window.addEventListener("favorites:changed", updateFavCount);
-    return () => {
-      window.removeEventListener("cart:changed", updateCartCount);
-      window.removeEventListener("favorites:changed", updateFavCount);
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen]);
+
+  const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
     };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("currentUser");
-    setUser(null);
+    apiLogout();
+    authLogout();
   };
 
   const handleSearch = (e) => {
@@ -81,79 +61,185 @@ const Header = () => {
 
   return (
     <>
-      <header className={styles.header}>
+      <header className={`${styles.header} ${scrolled ? styles.headerScrolled : ""}`} ref={headerRef}>
         <div className={styles.logo}>
-          <Link to="/" className={styles.logoLink}>Alu-Satu</Link>
+          <Link to="/" className={styles.logoLink}>Alu Satu</Link>
         </div>
 
         <form className={styles.searchForm} onSubmit={handleSearch}>
           <input
             type="text"
-            placeholder="Поиск товаров"
+            placeholder={t("header.searchPlaceholder")}
             className={styles.searchInput}
-            aria-label="Search"
+            aria-label={t("header.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <button type="submit" className={styles.searchButton} title="Search" aria-label="Search">
-            <img src={searchIcon} alt="Search" />
+          <button type="submit" className={styles.searchButton} title={t("header.search")} aria-label={t("header.search")}>
+            <img src={searchIcon} alt={t("header.search")} className={styles.searchIcon} />
           </button>
         </form>
 
         <nav className={styles.navIcons}>
-          <Link to="/sell" className={styles.sellBtn} title="Продать товар" aria-label="Sell">
-            Sell
+          <Link to="/sell" className={styles.sellBtn} title={t("header.sellTitle")} aria-label={t("header.sellTitle")}>
+            <span>{t("header.sell")}</span>
           </Link>
-          
-          <Link to="/favorites" className={styles.iconBtn} aria-label="Favorites" title="Избранное">
-            ★
+          <Link to="/favorites" className={styles.iconBtn} aria-label={t("header.favorites")} title={t("header.favorites")}>
+            <span className={styles.favIcon}>★</span>
             {favCount > 0 && <span className={styles.favBadge}>{favCount}</span>}
           </Link>
-          
-          <Link to="/cart" className={styles.iconBtn} aria-label="Cart" title="Корзина">
-            <img src={cartIcon} alt="Cart" className={styles.cartImg} />
+          <Link to="/cart" className={styles.iconBtn} aria-label={t("header.cart")} title={t("header.cart")}>
+            <img src={cartIcon} alt={t("header.cart")} className={styles.cartImg} />
             {cartCount > 0 && <span className={styles.cartBadge}>{cartCount}</span>}
           </Link>
-          
           {user ? (
             <div className={styles.userMenu}>
-              <span className={styles.username}>{user.username || user.email}</span>
-              <button onClick={handleLogout} className={styles.logoutBtn}>Выход</button>
+              <Link to={user.isAdmin ? "/admin" : "/profile"} className={styles.headerAvatar} title={user.isAdmin ? t("header.adminPanel") : t("header.profile")} aria-label={t("header.profile")}>
+                {avatarSrc ? (
+                  <img src={avatarSrc} alt="" className={styles.headerAvatarImg} />
+                ) : (
+                  <span className={styles.avatarInitials}>{(user.username || "?").slice(0, 2).toUpperCase()}</span>
+                )}
+              </Link>
+              <Link to="/profile" className={styles.usernameLink} title={t("header.profile")} aria-label={t("header.profile")}>
+                <span className={styles.username}>{user.username || user.email}</span>
+              </Link>
+              <button onClick={handleLogout} className={styles.logoutBtn}>{t("header.logout")}</button>
+              <div className={styles.langSwitcher}>
+                <button className={styles.langBtn} onClick={() => setShowLangMenu(v => !v)} type="button" title={t("lang." + lang)}>{lang.toUpperCase()}</button>
+                {showLangMenu && (
+                  <div className={styles.langDropdown}>
+                    {LANG_OPTIONS.map(o => (
+                      <button key={o.code} className={`${styles.langOption} ${lang === o.code ? styles.langActive : ""}`} onClick={() => { setLang(o.code); setShowLangMenu(false); }}>{o.label}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                className={styles.themeToggleBtn}
+                onClick={onToggleTheme}
+                aria-label={theme === "dark" ? t("header.enableLightTheme") : t("header.enableDarkTheme")}
+                title={theme === "dark" ? t("header.lightTheme") : t("header.darkTheme")}
+                type="button"
+              >
+                {theme === "dark" ? "🌞" : "🌙"}
+              </button>
             </div>
           ) : (
-            <button 
-              onClick={() => {
-                setShowAuthModal(true);
-                setAuthMode("login");
-              }}
-              className={styles.authBtn}
-              aria-label="Login"
-              title="Вход"
-            >
-              Sign up / Log in
-            </button>
+            <>
+              <button 
+                onClick={() => {
+                  setShowAuthModal(true);
+                  setAuthMode("login");
+                }}
+                className={styles.authBtn}
+                aria-label={t("header.login")}
+                title={t("header.loginTitle")}
+              >
+                {t("header.login")}
+              </button>
+              <div className={styles.langSwitcher}>
+                <button className={styles.langBtn} onClick={() => setShowLangMenu(v => !v)} type="button" title={t("lang." + lang)}>{lang.toUpperCase()}</button>
+                {showLangMenu && (
+                  <div className={styles.langDropdown}>
+                    {LANG_OPTIONS.map(o => (
+                      <button key={o.code} className={`${styles.langOption} ${lang === o.code ? styles.langActive : ""}`} onClick={() => { setLang(o.code); setShowLangMenu(false); }}>{o.label}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                className={styles.themeToggleBtn}
+                onClick={onToggleTheme}
+                aria-label={theme === "dark" ? t("header.enableLightTheme") : t("header.enableDarkTheme")}
+                title={theme === "dark" ? t("header.lightTheme") : t("header.darkTheme")}
+                type="button"
+              >
+                {theme === "dark" ? "🌞" : "🌙"}
+              </button>
+            </>
           )}
         </nav>
+
+        <div className={styles.mobileControls}>
+          <div className={styles.mobileLang}>
+            <button className={styles.langBtn} onClick={() => setShowLangMenu(v => !v)} type="button" title={t("lang." + lang)}>{lang.toUpperCase()}</button>
+            {showLangMenu && (
+              <div className={styles.langDropdown}>
+                {LANG_OPTIONS.map(o => (
+                  <button key={o.code} className={`${styles.langOption} ${lang === o.code ? styles.langActive : ""}`} onClick={() => { setLang(o.code); setShowLangMenu(false); }}>{o.label}</button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            className={styles.themeToggleBtn}
+            onClick={onToggleTheme}
+            aria-label={theme === "dark" ? t("header.enableLightTheme") : t("header.enableDarkTheme")}
+            title={theme === "dark" ? t("header.lightTheme") : t("header.darkTheme")}
+            type="button"
+          >
+            {theme === "dark" ? "🌞" : "🌙"}
+          </button>
+          <button
+            className={`${styles.burger} ${menuOpen ? styles.burgerOpen : ""}`}
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label={t("header.menu")}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
+
+      {menuOpen && <div className={styles.drawerOverlay} onClick={closeMenu} />}
+      <div className={`${styles.drawer} ${menuOpen ? styles.drawerOpen : ""}`}>
+        <div className={styles.drawerContent}>
+          <Link to="/sell" className={styles.drawerLink} onClick={closeMenu}>{t("header.sell")}</Link>
+          <Link to="/favorites" className={styles.drawerLink} onClick={closeMenu}>
+            {t("header.favorites")} {favCount > 0 && <span className={styles.drawerBadge}>{favCount}</span>}
+          </Link>
+          <Link to="/cart" className={styles.drawerLink} onClick={closeMenu}>
+            {t("header.cart")} {cartCount > 0 && <span className={styles.drawerBadge}>{cartCount}</span>}
+          </Link>
+          <Link to="/catalog" className={styles.drawerLink} onClick={closeMenu}>{t("header.catalog")}</Link>
+          {user ? (
+            <>
+              <Link to={user.isAdmin ? "/admin" : "/profile"} className={styles.drawerLink} onClick={closeMenu}>
+                {user.isAdmin ? t("header.adminPanel") : t("header.profile")}
+              </Link>
+              <button onClick={() => { handleLogout(); closeMenu(); }} className={styles.drawerLogout}>{t("header.logout")}</button>
+            </>
+          ) : (
+            <button onClick={() => { setShowAuthModal(true); setAuthMode("login"); closeMenu(); }} className={styles.drawerAuth}>
+              {t("header.login")}
+            </button>
+          )}
+
+        </div>
+      </div>
       </header>
 
       {showAuthModal && (
         <div className={styles.modalOverlay} onClick={() => setShowAuthModal(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <button className={styles.closeBtn} onClick={() => setShowAuthModal(false)}>✕</button>
-            <div className={styles.brand}>Alu-Satu</div>
+            <div className={styles.brand}>Alu Satu</div>
             {authMode === "login" ? (
               <LoginForm 
-                onSuccess={(userData) => {
-                  setUser(userData);
+                onSuccess={(userData, tkn) => {
+                  login(userData, tkn);
                   setShowAuthModal(false);
+                  navigate("/profile");
                 }} 
                 onSwitchMode={() => setAuthMode("register")}
               />
             ) : (
               <RegisterForm 
-                onSuccess={(userData) => {
-                  setUser(userData);
+                onSuccess={(userData, tkn) => {
+                  login(userData, tkn);
                   setShowAuthModal(false);
+                  navigate("/profile");
                 }} 
                 onSwitchMode={() => setAuthMode("login")}
               />
@@ -170,37 +256,38 @@ function LoginForm({ onSuccess, onSwitchMode }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!credential || !password) {
-      setError("Заполните все поля");
+      setError(t("auth.fillAllFields"));
       return;
     }
+    setLoading(true);
+    setError("");
 
     try {
-      const usersRaw = localStorage.getItem("users") || "[]";
-      const users = JSON.parse(usersRaw);
-      const user = users.find(u => (u.email === credential || u.username === credential) && u.password === password);
-      
-      if (user) {
-        localStorage.setItem("currentUser", JSON.stringify({ email: user.email, id: user.id, username: user.username }));
-        onSuccess({ email: user.email, id: user.id, username: user.username });
-        setError("");
-      } else {
-        setError("Неверный email или пароль");
-      }
-    } catch {
-      setError("Ошибка входа");
+
+      const data = await loginUser({ credential, password });
+      const u = data.user;
+      const userData = { email: u.email, id: u._id, username: u.username, isAdmin: u.isAdmin };
+      onSuccess(userData, data.token);
+    } catch (apiErr) {
+      const serverMsg = apiErr?.response?.data?.error;
+      setError(serverMsg || t("auth.loginError"));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <form onSubmit={handleLogin} className={styles.authForm}>
-      <h2>Вход</h2>
+      <h2>{t("auth.loginTitle")}</h2>
       <input
         type="text"
-        placeholder="Email или username"
+        placeholder={t("auth.emailOrUsername")}
         value={credential}
         onChange={(e) => setCredential(e.target.value)}
         className={styles.authInput}
@@ -209,7 +296,7 @@ function LoginForm({ onSuccess, onSwitchMode }) {
       <div className={styles.passwordRow}>
         <input
           type={showPassword ? "text" : "password"}
-          placeholder="Пароль"
+          placeholder={t("auth.password")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className={styles.authInput}
@@ -218,15 +305,15 @@ function LoginForm({ onSuccess, onSwitchMode }) {
           type="button"
           className={styles.showPwdBtn}
           onClick={() => setShowPassword(s => !s)}
-          aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+          aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
         >
-          {showPassword ? "Скрыть" : "Показать"}
+          {showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
         </button>
       </div>
       {error && <p className={styles.authError}>{error}</p>}
-      <button type="submit" className={styles.authSubmitBtn}>Войти</button>
+      <button type="submit" className={styles.authSubmitBtn} disabled={loading}>{loading ? t("auth.loggingIn") : t("auth.loginBtn")}</button>
       <p className={styles.authSwitch}>
-        Нет аккаунта? <button type="button" onClick={onSwitchMode} className={styles.switchLink}>Зарегистрироваться</button>
+        {t("auth.noAccount")} <button type="button" onClick={onSwitchMode} className={styles.switchLink}>{t("auth.switchToRegister")}</button>
       </p>
     </form>
   );
@@ -240,132 +327,46 @@ function RegisterForm({ onSuccess, onSwitchMode }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [codeInput, setCodeInput] = useState("");
-  const [sentCode, setSentCode] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (!username || !email || !password || !confirmPassword) {
-      setError("Заполните все поля");
+      setError(t("auth.fillAllFields"));
       return;
     }
     if (password !== confirmPassword) {
-      setError("Пароли не совпадают");
+      setError(t("auth.passwordsMismatch"));
       return;
     }
     if (password.length < 6) {
-      setError("Пароль должен быть минимум 6 символов");
+      setError(t("auth.passwordMinLength"));
       return;
     }
-
-    try {
-      const usersRaw = localStorage.getItem("users") || "[]";
-      let users = JSON.parse(usersRaw);
-      
-      if (users.find(u => u.email === email)) {
-        setError("Этот email уже зарегистрирован");
-        return;
-      }
-      if (users.find(u => u.username === username)) {
-        setError("Этот username уже занят");
-        return;
-      }
-
-      const code = String(Math.floor(100000 + Math.random() * 900000));
-      const pending = { id: Date.now(), username, email, password, code, createdAt: Date.now() };
-      localStorage.setItem("pendingRegistration", JSON.stringify(pending));
-      setSentCode(code);
-      console.log("Registration code (simulate SMS):", code);
-      setIsVerifying(true);
-      setError("Код отправлен на указанный номер/почту. Введите код для подтверждения.");
-    } catch {
-      setError("Ошибка регистрации");
-    }
-  };
-
-  const handleVerify = (e) => {
-    e.preventDefault();
-    try {
-      const pendingRaw = localStorage.getItem("pendingRegistration");
-      if (!pendingRaw) {
-        setError("Нет ожидающей регистрации. Сначала заполните форму.");
-        return;
-      }
-      const pending = JSON.parse(pendingRaw);
-      if (String(codeInput).trim() === String(pending.code)) {
-        const usersRaw = localStorage.getItem("users") || "[]";
-        const users = JSON.parse(usersRaw);
-        const newUser = { id: pending.id, username: pending.username, email: pending.email, password: pending.password };
-        users.push(newUser);
-        localStorage.setItem("users", JSON.stringify(users));
-        localStorage.removeItem("pendingRegistration");
-        localStorage.setItem("currentUser", JSON.stringify({ email: newUser.email, id: newUser.id, username: newUser.username }));
-        setError("");
-        onSuccess({ email: newUser.email, id: newUser.id, username: newUser.username });
-      } else {
-        setError("Неверный код подтверждения");
-      }
-    } catch {
-      setError("Ошибка подтверждения");
-    }
-  };
-
-  const handleResend = () => {
-    try {
-      const pendingRaw = localStorage.getItem("pendingRegistration");
-      if (!pendingRaw) return;
-      const pending = JSON.parse(pendingRaw);
-      const code = String(Math.floor(100000 + Math.random() * 900000));
-      pending.code = code;
-      pending.createdAt = Date.now();
-      localStorage.setItem("pendingRegistration", JSON.stringify(pending));
-      setSentCode(code);
-      console.log("Resent registration code (simulate SMS):", code);
-      setError("Код повторно отправлен");
-    } catch {
-      setError("Не удалось отправить код");
-    }
-  };
-
-  const handleCancelVerification = () => {
-    localStorage.removeItem("pendingRegistration");
-    setIsVerifying(false);
-    setCodeInput("");
+    setLoading(true);
     setError("");
-  };
 
-  if (isVerifying) {
-    return (
-      <form onSubmit={handleVerify} className={styles.authForm}>
-        <h2>Подтверждение кода</h2>
-        <p>Мы отправили 6-значный код. Введите его ниже.</p>
-        <input
-          type="text"
-          placeholder="Код из SMS"
-          value={codeInput}
-          onChange={(e) => setCodeInput(e.target.value.replace(/[^0-9]/g, ""))}
-          className={styles.authInput}
-          maxLength={6}
-          autoFocus
-        />
-        {sentCode && <p className={styles.authNote}>(Для разработки код: {sentCode})</p>}
-        {error && <p className={styles.authError}>{error}</p>}
-        <div className={styles.verifyRow}>
-          <button type="submit" className={styles.authSubmitBtn}>Проверить</button>
-          <button type="button" onClick={handleResend} className={styles.resendBtn}>Отправить снова</button>
-          <button type="button" onClick={handleCancelVerification} className={styles.cancelBtn}>Отмена</button>
-        </div>
-      </form>
-    );
-  }
+    try {
+
+      const data = await registerUser({ username, email, password });
+      const u = data.user;
+      const userData = { email: u.email, id: u._id, username: u.username, isAdmin: u.isAdmin };
+      onSuccess(userData, data.token);
+    } catch (apiErr) {
+      const serverMsg = apiErr?.response?.data?.error;
+      setError(serverMsg || t("auth.registerError"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <form onSubmit={handleRegister} className={styles.authForm}>
-      <h2>Регистрация</h2>
+      <h2>{t("auth.registerTitle")}</h2>
       <input
         type="text"
-        placeholder="Username"
+        placeholder={t("auth.username")}
         value={username}
         onChange={(e) => setUsername(e.target.value)}
         className={styles.authInput}
@@ -373,7 +374,7 @@ function RegisterForm({ onSuccess, onSwitchMode }) {
       />
       <input
         type="email"
-        placeholder="Email"
+        placeholder={t("auth.email")}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         className={styles.authInput}
@@ -381,7 +382,7 @@ function RegisterForm({ onSuccess, onSwitchMode }) {
       <div className={styles.passwordRow}>
         <input
           type={showPassword ? "text" : "password"}
-          placeholder="Пароль"
+          placeholder={t("auth.password")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className={styles.authInput}
@@ -390,15 +391,15 @@ function RegisterForm({ onSuccess, onSwitchMode }) {
           type="button"
           className={styles.showPwdBtn}
           onClick={() => setShowPassword(s => !s)}
-          aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+          aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
         >
-          {showPassword ? "Скрыть" : "Показать"}
+          {showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
         </button>
       </div>
       <div className={styles.passwordRow}>
         <input
           type={showConfirmPassword ? "text" : "password"}
-          placeholder="Подтвердите пароль"
+          placeholder={t("auth.confirmPassword")}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           className={styles.authInput}
@@ -407,18 +408,19 @@ function RegisterForm({ onSuccess, onSwitchMode }) {
           type="button"
           className={styles.showPwdBtn}
           onClick={() => setShowConfirmPassword(s => !s)}
-          aria-label={showConfirmPassword ? "Скрыть пароль" : "Показать пароль"}
+          aria-label={showConfirmPassword ? t("auth.hidePassword") : t("auth.showPassword")}
         >
-          {showConfirmPassword ? "Скрыть" : "Показать"}
+          {showConfirmPassword ? t("auth.hidePassword") : t("auth.showPassword")}
         </button>
       </div>
       {error && <p className={styles.authError}>{error}</p>}
-      <button type="submit" className={styles.authSubmitBtn}>Зарегистрироваться</button>
+      <button type="submit" className={styles.authSubmitBtn} disabled={loading}>{loading ? t("auth.registering") : t("auth.registerBtn")}</button>
       <p className={styles.authSwitch}>
-        Уже есть аккаунт? <button type="button" onClick={onSwitchMode} className={styles.switchLink}>Войти</button>
+        {t("auth.hasAccount")} <button type="button" onClick={onSwitchMode} className={styles.switchLink}>{t("auth.switchToLogin")}</button>
       </p>
     </form>
   );
 }
 
 export default Header;
+

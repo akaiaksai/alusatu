@@ -1,6 +1,8 @@
-// src/pages/Sell/Sell.jsx
 import React, { useState } from "react";
 import styles from "./Sell.module.css";
+import { createListedProduct } from "../../api/users.api";
+import { useAuth } from "../../store";
+import { useTranslation } from "../../i18n";
 
 const categories = ["Телефоны", "Ноутбуки", "Одежда", "Обувь", "Часы", "Сумки", "Аксессуары", "Электроника", "Дом и сад"];
 
@@ -10,80 +12,125 @@ const generateRouteId = () => {
       return crypto.randomUUID();
     }
   } catch {
-    // ignore
+
   }
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
 const Sell = () => {
+  const { token } = useAuth();
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("Телефоны");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [images, setImages] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
   const [msg, setMsg] = useState("");
   const [msgType, setMsgType] = useState("");
+  const fileInputRef = React.useRef(null);
 
-  const handleSubmit = (e) => {
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles = files.filter(
+      (file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024
+    );
+    if (validFiles.length !== files.length) {
+      setMsgType("error");
+      setMsg(t("sell.invalidFiles"));
+      return;
+    }
+    setImageFiles((prev) => [...prev, ...validFiles]);
+    validFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) =>
+        setImages((prev) => [...prev, ev.target.result]);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveImage = (idx) => {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
+    setImageFiles((prev) => prev.filter((_, i) => i !== idx));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim() || !price) {
       setMsgType("error");
-      setMsg("⚠️ Пожалуйста, введите название и цену.");
+      setMsg(t("sell.enterNameAndPrice"));
       return;
     }
-
-    if (!image.trim()) {
+    if (!images.length) {
       setMsgType("error");
-      setMsg("⚠️ Добавьте ссылку на фото (без фото товар не публикуется).");
+      setMsg(t("sell.addPhoto"));
       return;
     }
-
+    if (!token) {
+      setMsgType("error");
+      setMsg(t("sell.loginToPublish"));
+      return;
+    }
     try {
-      const raw = localStorage.getItem("listedProducts") || "[]";
-      const list = JSON.parse(raw);
-      const id = generateRouteId();
-      const product = { 
-        id, 
-        name: title, 
-        price: +price, 
-        category, 
-        description, 
-        image
-      };
-      list.push(product);
-      localStorage.setItem("listedProducts", JSON.stringify(list));
+      let product;
+
+      if (token) {
+
+        try {
+          product = await createListedProduct({
+            title,
+            price: +price,
+            category,
+            description,
+            images, 
+          });
+        } catch (err) {
+          console.error("API create failed", err);
+          throw err;
+        }
+      }
+
+      if (!product) throw new Error("No product returned from API");
+
       setMsgType("success");
-      setMsg("✓ Товар успешно опубликован!");
+      setMsg(t("sell.published"));
       setTitle(""); 
       setPrice(""); 
       setCategory("Телефоны"); 
       setDescription(""); 
       setImage("");
+      setImageFile(null);
+      setImages([]);
+      setImageFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       window.dispatchEvent(new CustomEvent("myproducts:changed"));
       setTimeout(() => setMsg(""), 3000);
     } catch (err) {
       console.error(err);
       setMsgType("error");
-      setMsg("✗ Ошибка при добавлении товара.");
+      setMsg(t("sell.publishError"));
     }
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1>Продайте свой товар</h1>
-        <p className={styles.subtitle}>Быстро и просто разместите объявление</p>
+        <h1>{t("sell.title")}</h1>
+        <p className={styles.subtitle}>{t("sell.subtitle")}</p>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formGroup}>
           <label htmlFor="title" className={styles.label}>
-            Название товара <span className={styles.required}>*</span>
+            {t("sell.productName")} <span className={styles.required}>{t("sell.required")}</span>
           </label>
           <input 
             id="title"
             type="text" 
-            placeholder="Например: iPhone 13 Pro" 
+            placeholder={t("sell.productNamePlaceholder")} 
             value={title} 
             onChange={(e) => setTitle(e.target.value)}
             className={styles.input}
@@ -94,7 +141,7 @@ const Sell = () => {
         <div className={styles.row}>
           <div className={styles.formGroup}>
             <label htmlFor="price" className={styles.label}>
-              Цена (₸) <span className={styles.required}>*</span>
+              {t("sell.price")} <span className={styles.required}>{t("sell.required")}</span>
             </label>
             <input 
               id="price"
@@ -109,7 +156,7 @@ const Sell = () => {
 
           <div className={styles.formGroup}>
             <label htmlFor="category" className={styles.label}>
-              Категория
+              {t("sell.categoryLabel")}
             </label>
             <select 
               id="category"
@@ -125,31 +172,59 @@ const Sell = () => {
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="image" className={styles.label}>
-            Ссылка на фото
+          <label className={styles.label}>
+            {t("sell.photos")} <span className={styles.required}>{t("sell.required")}</span>
           </label>
-          <input 
-            id="image"
-            type="url" 
-            placeholder="https://example.com/photo.jpg" 
-            value={image} 
-            onChange={(e) => setImage(e.target.value)}
-            className={styles.input}
-          />
-          {image && (
-            <div className={styles.preview}>
-              <img src={image} alt="Превью" onError={(e) => e.target.src = "https://via.placeholder.com/200?text=Ошибка+загрузки"} />
-            </div>
-          )}
+          <div className={styles.uploadRow}>
+            <label
+              className={styles.uploadBtn}
+            >
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" style={{ marginRight: 6 }}>
+                <path d="M16.5 19.5H7.5C5.01472 19.5 3 17.4853 3 15V9C3 6.51472 5.01472 4.5 7.5 4.5H8.37868C8.74456 4.5 9.09763 4.63214 9.36612 4.86612L10.6339 5.93388C10.9024 6.16786 11.2554 6.3 11.6213 6.3H16.5C18.9853 6.3 21 8.31472 21 10.8V15C21 17.4853 18.9853 19.5 16.5 19.5Z" stroke="currentColor" strokeWidth="1.5"/>
+                <circle cx="12" cy="13" r="3.2" stroke="currentColor" strokeWidth="1.5"/>
+              </svg>
+              <span>{t("sell.uploadPhoto")}</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+              />
+            </label>
+            <span className={styles.uploadRowHint}>
+              {t("sell.multipleFiles")}
+            </span>
+          </div>
+          <div className={styles.thumbGrid}>
+            {images.map((img, idx) => (
+              <div key={idx} className={styles.thumbItem}>
+                <img
+                  src={img}
+                  alt={`preview-${idx}`}
+                  className={styles.thumbImg}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveImage(idx)}
+                  className={styles.thumbRemove}
+                  aria-label={t("sell.removeImage")}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className={styles.formGroup}>
           <label htmlFor="description" className={styles.label}>
-            Описание
+            {t("sell.descriptionLabel")}
           </label>
           <textarea 
             id="description"
-            placeholder="Расскажите подробнее о товаре..." 
+            placeholder={t("sell.descriptionPlaceholder")} 
             value={description} 
             onChange={(e) => setDescription(e.target.value)}
             className={styles.textarea}
@@ -158,7 +233,7 @@ const Sell = () => {
         </div>
 
         <button type="submit" className={styles.submitBtn}>
-          Опубликовать товар
+          {t("sell.publish")}
         </button>
       </form>
 

@@ -1,57 +1,39 @@
-export const mockProducts = [
-
-  // Телефоны
+export const mockProducts = [
   { id: 101, name: "iPhone 13 Pro", price: 499990, category: "Телефоны", image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80&auto=format&fit=crop", description: "Флагманский смартфон Apple" },
   { id: 102, name: "Samsung Galaxy S21", price: 399990, category: "Телефоны", image: "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=800&q=80&auto=format&fit=crop", description: "Мощный Android смартфон" },
   { id: 103, name: "Xiaomi 12", price: 299990, category: "Телефоны", image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=800&q=80&auto=format&fit=crop", description: "Производительный смартфон" },
   { id: 104, name: "Google Pixel 7", price: 349990, category: "Телефоны", image: "https://images.unsplash.com/photo-1583573636246-18cb2246697f?w=800&q=80&auto=format&fit=crop", description: "Чистый Android и отличная камера" },
-  { id: 105, name: "Huawei P50 Pro", price: 329990, category: "Телефоны", image: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=800&q=80&auto=format&fit=crop", description: "Флагман от Huawei" },
-
-  // Ноутбуки
+  { id: 105, name: "Huawei P50 Pro", price: 329990, category: "Телефоны", image: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=800&q=80&auto=format&fit=crop", description: "Флагман от Huawei" },
   { id: 201, name: "MacBook Pro 14", price: 799990, category: "Ноутбуки", image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80&auto=format&fit=crop", description: "Профессиональный ноутбук для работы" },
   { id: 202, name: "Dell XPS 13", price: 649990, category: "Ноутбуки", image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80&auto=format&fit=crop", description: "Ультрабук с тонкими рамками" },
   { id: 203, name: "ASUS VivoBook 15", price: 399990, category: "Ноутбуки", image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&q=80&auto=format&fit=crop", description: "Ноутбук для повседневных задач" },
-  { id: 204, name: "Lenovo ThinkPad X1", price: 729990, category: "Ноутбуки", image: "https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=800&q=80&auto=format&fit=crop", description: "Надежный бизнес-ноутбук" },
-
-  // Электроника
+  { id: 204, name: "Lenovo ThinkPad X1", price: 729990, category: "Ноутбуки", image: "https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=800&q=80&auto=format&fit=crop", description: "Надежный бизнес-ноутбук" },
   { id: 801, name: "Умная колонка", price: 59990, category: "Электроника", image: "https://images.unsplash.com/photo-1512446816042-444d641267d4?w=800&q=80&auto=format&fit=crop", description: "Портативная умная колонка" },
   { id: 802, name: "USB HUB", price: 9990, category: "Электроника", image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&q=80&auto=format&fit=crop", description: "Многопортовый USB-хаб" },
   { id: 803, name: "Веб-камера 1080p", price: 14990, category: "Электроника", image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&q=80&auto=format&fit=crop", description: "HD веб-камера для звонков" },
   { id: 804, name: "Игровая консоль", price: 299990, category: "Электроника", image: "https://images.unsplash.com/photo-1606813902914-2726f09785e2?w=800&q=80&auto=format&fit=crop", description: "Современная игровая приставка" },
-  { id: 805, name: "Портативный SSD 1TB", price: 89990, category: "Электроника", image: "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=800&q=80&auto=format&fit=crop", description: "Быстрый внешний накопитель" },
-
-  // Одежда
+  { id: 805, name: "Портативный SSD 1TB", price: 89990, category: "Электроника", image: "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=800&q=80&auto=format&fit=crop", description: "Быстрый внешний накопитель" },
   { id: 302, name: "Кожаная куртка", price: 59990, category: "Одежда", image: "https://images.unsplash.com/photo-1520975661595-6453be3f7070?w=800&q=80&auto=format&fit=crop", description: "Классическая кожаная куртка" },
   { id: 303, name: "Джинсы прямого кроя", price: 19990, category: "Одежда", image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=800&q=80&auto=format&fit=crop", description: "Универсальные джинсы" },
   { id: 304, name: "Футболка базовая", price: 4990, category: "Одежда", image: "https://images.unsplash.com/photo-1520975958221-5c7fdc2b7b32?w=800&q=80&auto=format&fit=crop", description: "Базовая хлопковая футболка" },
-  { id: 305, name: "Худи oversize", price: 14990, category: "Одежда", image: "https://images.unsplash.com/photo-1520975693411-6b1b2b9d2a3a?w=800&q=80&auto=format&fit=crop", description: "Теплое худи" },
-
-  // Обувь
+  { id: 305, name: "Худи oversize", price: 14990, category: "Одежда", image: "https://images.unsplash.com/photo-1520975693411-6b1b2b9d2a3a?w=800&q=80&auto=format&fit=crop", description: "Теплое худи" },
   { id: 401, name: "Кроссовки", price: 27990, category: "Обувь", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80&auto=format&fit=crop", description: "Комфортные спортивные кроссовки" },
   { id: 402, name: "Классические туфли", price: 34990, category: "Обувь", image: "https://images.unsplash.com/photo-1528701800489-20be3c30c1d5?w=800&q=80&auto=format&fit=crop", description: "Деловая обувь" },
   { id: 403, name: "Зимние ботинки", price: 39990, category: "Обувь", image: "https://images.unsplash.com/photo-1504274066651-8d31a536b11a?w=800&q=80&auto=format&fit=crop", description: "Теплые зимние ботинки" },
   { id: 404, name: "Летние сандалии", price: 14990, category: "Обувь", image: "https://images.unsplash.com/photo-1514986888952-8cd320577b68?w=800&q=80&auto=format&fit=crop", description: "Легкие открытые сандалии" },
-  { id: 405, name: "Кеды", price: 17990, category: "Обувь", image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&q=80&auto=format&fit=crop", description: "Классические кеды" },
-
-  // Часы
+  { id: 405, name: "Кеды", price: 17990, category: "Обувь", image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&q=80&auto=format&fit=crop", description: "Классические кеды" },
   { id: 501, name: "Apple Watch Series 7", price: 199990, category: "Часы", image: "https://images.unsplash.com/photo-1515847049296-a281d6401047?w=800&q=80&auto=format&fit=crop", description: "Умные часы Apple" },
   { id: 502, name: "Samsung Galaxy Watch", price: 159990, category: "Часы", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80&auto=format&fit=crop", description: "Смарт-часы Android" },
   { id: 503, name: "Классические часы", price: 49990, category: "Часы", image: "https://images.unsplash.com/photo-1456428199391-a3b1cb5e93ab?w=800&q=80&auto=format&fit=crop", description: "Механические наручные часы" },
-  { id: 504, name: "Фитнес-браслет", price: 19990, category: "Часы", image: "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80&auto=format&fit=crop", description: "Трекер активности" },
-
-  // Сумки
+  { id: 504, name: "Фитнес-браслет", price: 19990, category: "Часы", image: "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80&auto=format&fit=crop", description: "Трекер активности" },
   { id: 601, name: "Рюкзак городской", price: 19990, category: "Сумки", image: "https://images.unsplash.com/photo-1518552718887-75a388c1eaa3?w=800&q=80&auto=format&fit=crop", description: "Удобный городской рюкзак" },
   { id: 602, name: "Кожаная сумка", price: 39990, category: "Сумки", image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80&auto=format&fit=crop", description: "Элегантная кожаная сумка" },
   { id: 603, name: "Спортивная сумка", price: 24990, category: "Сумки", image: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800&q=80&auto=format&fit=crop", description: "Сумка для спорта" },
-  { id: 604, name: "Поясная сумка", price: 12990, category: "Сумки", image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&q=80&auto=format&fit=crop", description: "Компактная поясная сумка" },
-
-  // Аксессуары
+  { id: 604, name: "Поясная сумка", price: 12990, category: "Сумки", image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&q=80&auto=format&fit=crop", description: "Компактная поясная сумка" },
   { id: 701, name: "Наушники Bluetooth", price: 19990, category: "Аксессуары", image: "https://images.unsplash.com/photo-1519677100203-a0e668c92439?w=800&q=80&auto=format&fit=crop", description: "Беспроводные наушники" },
   { id: 702, name: "USB-C кабель", price: 1990, category: "Аксессуары", image: "https://images.unsplash.com/photo-1587145820266-a5951ee6f620?w=800&q=80&auto=format&fit=crop", description: "Кабель для зарядки" },
   { id: 703, name: "Чехол для телефона", price: 2990, category: "Аксессуары", image: "https://images.unsplash.com/photo-1585386959984-a4155223f3f8?w=800&q=80&auto=format&fit=crop", description: "Защитный чехол" },
-  { id: 704, name: "Пауэрбанк 10000 мАч", price: 9990, category: "Аксессуары", image: "https://images.unsplash.com/photo-1609592423389-ccfdfb95cf3b?w=800&q=80&auto=format&fit=crop", description: "Портативный аккумулятор" },
-
-  // Дом и сад (включая мебель)
+  { id: 704, name: "Пауэрбанк 10000 мАч", price: 9990, category: "Аксессуары", image: "https://images.unsplash.com/photo-1609592423389-ccfdfb95cf3b?w=800&q=80&auto=format&fit=crop", description: "Портативный аккумулятор" },
   { id: 901, name: "Комнатное растение", price: 14990, category: "Дом и сад", image: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=800&q=80&auto=format&fit=crop", description: "Декоративное растение" },
   { id: 902, name: "Лампа настольная", price: 24990, category: "Дом и сад", image: "https://images.unsplash.com/photo-1519710164239-da123dc03ef4?w=800&q=80&auto=format&fit=crop", description: "LED настольная лампа" },
   { id: 903, name: "Комплект постельного белья", price: 29990, category: "Дом и сад", image: "https://images.unsplash.com/photo-1505692794401-7a51e21c05c1?w=800&q=80&auto=format&fit=crop", description: "Мягкое хлопковое белье" },

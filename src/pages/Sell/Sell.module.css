@@ -1,36 +1,134 @@
 .container {
-  max-width: 600px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: 2rem 1rem;
-  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
-  min-height: 100vh;
+  padding: 2.5rem 1.5rem;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.uploadRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.uploadRowHint {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.thumbGrid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.thumbItem {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.thumbImg {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  display: block;
+  transition: transform 0.2s;
+}
+
+.thumbItem:hover .thumbImg {
+  transform: scale(1.04);
+}
+
+.thumbRemove {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  box-shadow: var(--shadow-soft);
+  padding: 0;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.thumbRemove:hover {
+  transform: scale(1.1);
+  background: #ff4444;
+  color: #fff;
+}
+
+.uploadBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.uploadBtn:hover {
+  background: var(--bg-hover);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-2px);
+}
+
+.uploadBtn svg {
+  width: 24px;
+  height: 24px;
+  color: currentColor;
+  margin-right: 8px;
+}
+
+.uploadBtn span {
+  font-size: 1rem;
+  color: inherit;
 }
 
 .header {
   text-align: center;
   margin-bottom: 2rem;
-  color: white;
+  color: var(--text-primary);
 }
 
 .header h1 {
   font-size: 2rem;
   margin: 0 0 0.5rem 0;
-  color: #fff;
+  color: var(--text-primary);
   font-weight: 700;
 }
 
 .subtitle {
   font-size: 1rem;
-  color: #999;
+  color: var(--text-muted);
   margin: 0;
 }
 
 .form {
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-card);
 }
 
 .formGroup {
@@ -40,7 +138,7 @@
 .label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #fff;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 0.95rem;
 }
@@ -54,13 +152,13 @@
 .textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #333;
-  border-radius: 6px;
-  background: #2a2a2a;
-  color: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   font-size: 1rem;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-  transition: all 0.2s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   box-sizing: border-box;
 }
 
@@ -68,9 +166,8 @@
 .select:focus,
 .textarea:focus {
   outline: none;
-  border-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
-  background: #333;
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-soft);
 }
 
 .textarea {
@@ -80,12 +177,20 @@
 
 .select {
   cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 1.25rem;
+  background: var(--bg-secondary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8e8e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 0.75rem center / 1rem;
   padding-right: 2.5rem;
+}
+
+[data-theme="light"] .select {
+  background: var(--bg-secondary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 0.75rem center / 1rem;
+}
+
+.select option {
+  background: var(--bg-card);
+  color: var(--text-primary);
 }
 
 .row {
@@ -94,41 +199,104 @@
   gap: 1rem;
 }
 
-.preview {
-  margin-top: 1rem;
-  border-radius: 6px;
-  overflow: hidden;
-  max-width: 200px;
-  background: #2a2a2a;
-  border: 1px solid #333;
+.fileInput {
+  display: none;
 }
 
-.preview img {
-  width: 100%;
-  height: auto;
+.uploadArea {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--border-color);
+  border-radius: 10px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: var(--bg-elevated);
+  min-height: 160px;
+}
+
+.uploadArea:hover {
+  border-color: var(--border-light);
+  background: var(--bg-hover);
+}
+
+.uploadPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.uploadIcon {
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+.uploadHint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.previewWrap {
+  position: relative;
+  display: inline-block;
+}
+
+.previewImg {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
   display: block;
+  object-fit: cover;
+}
+
+.removeBtn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ff4444;
+  color: #fff;
+  border: 2px solid var(--bg-card);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.removeBtn:hover {
+  background: #e03030;
+  transform: scale(1.1);
 }
 
 .submitBtn {
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(135deg, #000000 0%, #000000 100%);
-  color: white;
-  border: none;
-  border-radius: 6px;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
   margin-top: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .submitBtn:hover {
-  background: linear-gradient(135deg, #000000 0%, #000000 100%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lift);
+  opacity: 0.9;
 }
 
 .submitBtn:active {
@@ -138,7 +306,7 @@
 .message {
   margin-top: 1.5rem;
   padding: 1rem;
-  border-radius: 6px;
+  border-radius: 8px;
   text-align: center;
   font-weight: 600;
   animation: slideIn 0.3s ease;
@@ -186,7 +354,7 @@
 
   .form {
     padding: 1.5rem;
-    border-radius: 6px;
+    border-radius: 10px;
   }
 
   .formGroup {
@@ -214,9 +382,14 @@
     gap: 1rem;
   }
 
-  .preview {
+  .uploadArea {
+    min-height: 140px;
+    padding: 1.2rem;
+  }
+
+  .previewImg {
     max-width: 150px;
-    margin-top: 0.8rem;
+    max-height: 150px;
   }
 
   .submitBtn {
@@ -253,8 +426,7 @@
 
   .form {
     padding: 1rem;
-    border-radius: 6px;
-    background: #1a1a1a;
+    border-radius: 8px;
   }
 
   .formGroup {
@@ -271,7 +443,7 @@
   .textarea {
     padding: 0.6rem;
     font-size: 0.9rem;
-    border-radius: 4px;
+    border-radius: 6px;
   }
 
   .textarea {
@@ -284,13 +456,15 @@
     gap: 0.8rem;
   }
 
-  .preview {
-    max-width: 120px;
-    margin-top: 0.6rem;
+  .uploadArea {
+    min-height: 120px;
+    padding: 1rem;
   }
 
-  .preview img {
-    border-radius: 4px;
+  .previewImg {
+    max-width: 120px;
+    max-height: 120px;
+    border-radius: 6px;
   }
 
   .submitBtn {
@@ -304,6 +478,6 @@
     padding: 0.6rem;
     margin-top: 0.8rem;
     font-size: 0.85rem;
-    border-radius: 4px;
+    border-radius: 6px;
   }
 }
