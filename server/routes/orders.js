@@ -1,135 +1,324 @@
-const router = require('express').Router();
+﻿const router = require('express').Router();
 const Order = require('../models/Order');
-const User = require('../models/User');
+const Receipt = require('../models/Receipt');
 const ListedProduct = require('../models/ListedProduct');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cache');
 
-// POST /api/orders/:id/refund — оформить возврат заказа и средств
+const DAY_MS = 24 * 60 * 60 * 1000;
+const STATUS_WEIGHT = {
+  pending: 0,
+  paid: 1,
+  shipped: 2,
+  delivered: 3,
+  cancelled: 99,
+};
+
+function parsePickupDateToUtcDate(value) {
+  const raw = String(value || '').trim();
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const dt = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function computeDeliveryDate({ pickupDate, createdAt, deliveryMethod }) {
+  const fromPickupDate = parsePickupDateToUtcDate(pickupDate);
+  if (fromPickupDate) return fromPickupDate;
+
+  const created = createdAt instanceof Date ? createdAt : new Date(createdAt || Date.now());
+  const fallbackDays = deliveryMethod === 'courier' ? 3 : 2;
+  return new Date(created.getTime() + fallbackDays * DAY_MS);
+}
+
+function computeShippedAt({ createdAt, deliveryDate }) {
+  const created = createdAt instanceof Date ? createdAt : new Date(createdAt || Date.now());
+  const quickFallback = new Date(created.getTime() + 12 * 60 * 60 * 1000);
+
+  if (!(deliveryDate instanceof Date) || Number.isNaN(deliveryDate.getTime())) {
+    return quickFallback;
+  }
+
+  const oneDayBeforeDelivery = new Date(deliveryDate.getTime() - DAY_MS);
+  if (oneDayBeforeDelivery.getTime() <= created.getTime()) {
+    return quickFallback;
+  }
+
+  return oneDayBeforeDelivery;
+}
+
+function generateReceiptNumber() {
+  const now = new Date();
+  const stamp = now.toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
+  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `AS-${stamp}-${random}`;
+}
+
+function timedStatusForOrder(orderLike, now = new Date()) {
+  if (!orderLike || orderLike.status === 'cancelled') return 'cancelled';
+
+  const deliveryDate = orderLike.deliveryDate instanceof Date
+    ? orderLike.deliveryDate
+    : new Date(orderLike.deliveryDate || 0);
+
+  const shippedAt = orderLike.shippedAt instanceof Date
+    ? orderLike.shippedAt
+    : new Date(orderLike.shippedAt || 0);
+
+  if (!Number.isNaN(deliveryDate.getTime()) && now.getTime() >= deliveryDate.getTime()) {
+    return 'delivered';
+  }
+
+  if (!Number.isNaN(shippedAt.getTime()) && now.getTime() >= shippedAt.getTime()) {
+    return 'shipped';
+  }
+
+  return 'paid';
+}
+
+async function applyTimedStatus(orderDoc, now = new Date()) {
+  if (!orderDoc || orderDoc.status === 'cancelled') return orderDoc;
+
+  const timedStatus = timedStatusForOrder(orderDoc, now);
+  const currentWeight = STATUS_WEIGHT[orderDoc.status] ?? 0;
+  const timedWeight = STATUS_WEIGHT[timedStatus] ?? 0;
+
+  if (timedWeight <= currentWeight) return orderDoc;
+
+  orderDoc.status = timedStatus;
+
+  if (timedStatus === 'shipped' && !orderDoc.shippedAt) {
+    orderDoc.shippedAt = now;
+  }
+
+  if (timedStatus === 'delivered' && !orderDoc.deliveredAt) {
+    orderDoc.deliveredAt = now;
+  }
+
+  await orderDoc.save();
+  return orderDoc;
+}
+
+function buildReceiptPayload(orderDoc) {
+  const items = (orderDoc.items || []).map((item) => {
+    const price = Number(item.price || 0);
+    const quantity = Number(item.quantity || 0);
+    return {
+      productId: item.productId,
+      name: item.name || '',
+      price,
+      quantity,
+      image: item.image || '',
+      lineTotal: price * quantity,
+    };
+  });
+
+  return {
+    orderId: orderDoc._id,
+    userId: orderDoc.userId,
+    receiptNumber: generateReceiptNumber(),
+    buyer: orderDoc.username,
+    paymentMethod: 'online',
+    currency: 'KZT',
+    issuedAt: orderDoc.createdAt || new Date(),
+    items,
+    total: Number(orderDoc.total || 0),
+    totalItems: Number(orderDoc.totalItems || 0),
+    deliveryMethod: orderDoc.deliveryMethod || 'pickup',
+    pickupDate: orderDoc.pickupDate || '',
+    deliveryDate: orderDoc.deliveryDate || null,
+    deliveryAddress: orderDoc.deliveryAddress || '',
+    pickupAddress: orderDoc.pickupAddress || '',
+    pickupHours: orderDoc.pickupHours || '',
+  };
+}
+
+async function attachReceipts(orders) {
+  if (!orders || orders.length === 0) return [];
+
+  const orderIds = orders.map((order) => order._id);
+  const receipts = await Receipt.find({ orderId: { $in: orderIds } }).lean();
+  const receiptMap = new Map(receipts.map((receipt) => [String(receipt.orderId), receipt]));
+
+  return orders.map((order) => ({
+    ...order.toObject(),
+    receipt: receiptMap.get(String(order._id)) || null,
+  }));
+}
+
 router.post('/:id/refund', requireAuth, invalidateCache('/api/orders', '/api/products'), async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ error: 'Заказ не найден' });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
     if (order.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: 'Нет доступа к возврату этого заказа' });
+      return res.status(403).json({ error: 'No access to refund this order' });
     }
+
     if (order.status === 'cancelled') {
-      return res.status(400).json({ error: 'Заказ уже отменён/возвращён' });
+      return res.status(400).json({ error: 'Order already refunded/cancelled' });
     }
-    // Вернуть средства
-    req.user.balance = (req.user.balance || 0) + order.total;
+
+    req.user.balance = (req.user.balance || 0) + Number(order.total || 0);
     await req.user.save();
+
     order.status = 'cancelled';
     await order.save();
 
     res.json({ success: true, balance: req.user.balance, order });
   } catch (err) {
     console.error('refund error:', err);
-    res.status(500).json({ error: 'Ошибка возврата заказа' });
+    res.status(500).json({ error: 'Refund error' });
   }
 });
 
-// POST /api/orders — create order from current cart (deducts balance)
 router.post('/', requireAuth, invalidateCache('/api/orders', '/api/cart', '/api/products'), async (req, res) => {
   try {
     const { items, total, totalItems, pickupDate, deliveryMethod, deliveryAddress, pickupAddress } = req.body;
     const user = req.user;
 
-    // Check sufficient balance
-    const currentBalance = user.balance || 0;
-    if (currentBalance < total) {
+    const currentBalance = Number(user.balance || 0);
+    const orderTotal = Number(total || 0);
+
+    if (currentBalance < orderTotal) {
       return res.status(400).json({
-        error: 'Недостаточно средств на балансе. Пополните счёт, чтобы купить товар.',
+        error: 'Insufficient funds',
         code: 'INSUFFICIENT_FUNDS',
         balance: currentBalance,
-        required: total,
+        required: orderTotal,
       });
     }
 
-    // Check if any listed products are already sold
     const listedProductIds = (items || [])
-      .map(i => String(i.productId))
-      .filter(id => /^[a-f0-9]{24}$/i.test(id));
+      .map((item) => String(item.productId))
+      .filter((id) => /^[a-f0-9]{24}$/i.test(id));
 
     if (listedProductIds.length > 0) {
       const listedProducts = await ListedProduct.find({ _id: { $in: listedProductIds } });
-      const foundIds = new Set(listedProducts.map(p => String(p._id)));
-      const soldProducts = listedProducts.filter(p => p.sold);
-      const missingIds = listedProductIds.filter(id => !foundIds.has(id));
+      const foundIds = new Set(listedProducts.map((product) => String(product._id)));
+      const soldProducts = listedProducts.filter((product) => product.sold);
+      const missingIds = listedProductIds.filter((id) => !foundIds.has(id));
+
       if (soldProducts.length > 0 || missingIds.length > 0) {
-        const soldNames = soldProducts.map(p => p.title).join(', ');
+        const soldNames = soldProducts.map((product) => product.title).join(', ');
         return res.status(400).json({
           error: soldNames
-            ? `Товар(ы) уже проданы: ${soldNames}`
-            : 'Один или несколько товаров уже проданы или удалены',
+            ? `Product(s) already sold: ${soldNames}`
+            : 'One or more products have already been sold or deleted',
           code: 'PRODUCT_SOLD',
         });
       }
     }
 
-    // Deduct balance
-    user.balance = currentBalance - total;
+    const now = new Date();
+    const normalizedDeliveryMethod = deliveryMethod === 'courier' ? 'courier' : 'pickup';
+    const deliveryDate = computeDeliveryDate({ pickupDate, createdAt: now, deliveryMethod: normalizedDeliveryMethod });
+    const shippedAt = computeShippedAt({ createdAt: now, deliveryDate });
+
+    user.balance = currentBalance - orderTotal;
 
     const order = await Order.create({
       userId: user._id,
       username: user.username,
       items,
-      total,
+      total: orderTotal,
       totalItems,
       pickupDate: pickupDate || '',
-      deliveryMethod: deliveryMethod || 'pickup',
+      deliveryMethod: normalizedDeliveryMethod,
       deliveryAddress: deliveryAddress || '',
       pickupAddress: pickupAddress || '',
       status: 'paid',
+      paidAt: now,
+      shippedAt,
+      deliveryDate,
     });
 
-    // Mark listed products as sold, then delete them from listings
+    const receipt = await Receipt.create(buildReceiptPayload(order));
+    order.receiptId = receipt._id;
+    await order.save();
+
     if (listedProductIds.length > 0) {
-      await ListedProduct.deleteMany(
-        { _id: { $in: listedProductIds } }
-      );
+      await ListedProduct.deleteMany({ _id: { $in: listedProductIds } });
     }
 
-    // clear cart after order
     user.cart = [];
     await user.save();
 
-    res.status(201).json({ ...order.toObject(), balance: user.balance });
+    res.status(201).json({ ...order.toObject(), receipt, balance: user.balance });
   } catch (err) {
     console.error('create order error:', err.message, err.stack);
-    res.status(500).json({ error: 'Ошибка создания заказа', details: err.message });
+    res.status(500).json({ error: 'Order creation error', details: err.message });
   }
 });
 
-// GET /api/orders — get my orders (cached 30s + ETag)
 router.get('/', requireAuth, cacheMiddleware(30), async (req, res) => {
   try {
     const orders = await Order.find({ userId: req.user._id }).sort({ createdAt: -1 });
-    res.json(orders);
+
+    const now = new Date();
+    for (const order of orders) {
+      await applyTimedStatus(order, now);
+    }
+
+    const payload = await attachReceipts(orders);
+    res.json(payload);
   } catch (err) {
-    res.status(500).json({ error: 'Ошибка загрузки заказов' });
+    console.error('orders list error:', err);
+    res.status(500).json({ error: 'Failed to load orders' });
   }
 });
 
-// GET /api/orders/all — admin: get all orders (cached 30s + ETag)
 router.get('/all', requireAuth, requireAdmin, cacheMiddleware(30), async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
-    res.json(orders);
+
+    const now = new Date();
+    for (const order of orders) {
+      await applyTimedStatus(order, now);
+    }
+
+    const payload = await attachReceipts(orders);
+    res.json(payload);
   } catch (err) {
-    res.status(500).json({ error: 'Ошибка загрузки заказов' });
+    console.error('orders list all error:', err);
+    res.status(500).json({ error: 'Failed to load orders' });
   }
 });
 
-// PUT /api/orders/:id/status — admin: update order status
+router.get('/:id/receipt', requireAuth, cacheMiddleware(30), async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const isOwner = String(order.userId) === String(req.user._id);
+    if (!isOwner && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const receipt = await Receipt.findOne({ orderId: order._id });
+    if (!receipt) return res.status(404).json({ error: 'Receipt not found' });
+
+    res.json(receipt);
+  } catch (err) {
+    console.error('receipt load error:', err);
+    res.status(500).json({ error: 'Failed to load receipt' });
+  }
+});
+
 router.put('/:id/status', requireAuth, requireAdmin, invalidateCache('/api/orders'), async (req, res) => {
   try {
     const { status } = req.body;
     const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true });
-    if (!order) return res.status(404).json({ error: 'Заказ не найден' });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
     res.json(order);
   } catch (err) {
-    res.status(500).json({ error: 'Ошибка обновления заказа' });
+    console.error('status update error:', err);
+    res.status(500).json({ error: 'Failed to update order status' });
   }
 });
 

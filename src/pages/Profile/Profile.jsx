@@ -7,7 +7,7 @@ import AvatarPicker from "../../components/AvatarPicker/AvatarPicker";
 import { mockProducts } from "../../data/mockProducts";
 import { getProducts } from "../../api/products.api";
 import formatPrice, { formatKzt, toPriceKzt } from "../../utils/formatPrice";
-import { updateProfile as apiUpdateProfile, getMyOrders, getMyListedProducts, deleteListedProduct, getProfile } from "../../api/users.api";
+import { updateProfile as apiUpdateProfile, getMyOrders, getMyListedProducts, deleteListedProduct, getProfile, getOrderReceipt } from "../../api/users.api";
 import { logout as apiLogout } from "../../api/auth.api";
 import { useAuth } from "../../store";
 import { topUpBalance, refundOrder } from "../../api/users.api";
@@ -28,11 +28,97 @@ const fmtDate = (iso) => {
   } catch { return "—"; }
 };
 
+const ORDER_STATUSES = ["paid", "shipped", "delivered"];
+const STATUS_WEIGHT = { pending: 0, paid: 1, shipped: 2, delivered: 3, cancelled: 99 };
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const parseDateSafe = (value) => {
+  const dt = new Date(value || 0);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+};
+
+const parsePickupDate = (value) => {
+  const raw = String(value || "").trim();
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const dt = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+};
+
+const getOrderDeliveryDate = (order) => {
+  const fromDeliveryDate = parseDateSafe(order?.deliveryDate);
+  if (fromDeliveryDate) return fromDeliveryDate;
+
+  const fromPickupDate = parsePickupDate(order?.pickupDate);
+  if (fromPickupDate) return fromPickupDate;
+
+  const fromCreated = parseDateSafe(order?.date);
+  if (!fromCreated) return null;
+  return new Date(fromCreated.getTime() + 2 * DAY_MS);
+};
+
+const getTimedStatus = (order, nowMs) => {
+  if (!order) return "paid";
+  if (order.status === "cancelled") return "cancelled";
+
+  const currentStatus = order.status || "paid";
+  const now = Number(nowMs || Date.now());
+  const deliveryDate = getOrderDeliveryDate(order);
+  const shippedAt = parseDateSafe(order?.shippedAt);
+
+  let derived = "paid";
+
+  if (deliveryDate && now >= deliveryDate.getTime()) {
+    derived = "delivered";
+  } else if (shippedAt && now >= shippedAt.getTime()) {
+    derived = "shipped";
+  } else if (!shippedAt && deliveryDate && now >= (deliveryDate.getTime() - DAY_MS)) {
+    derived = "shipped";
+  }
+
+  return (STATUS_WEIGHT[derived] ?? 0) > (STATUS_WEIGHT[currentStatus] ?? 0) ? derived : currentStatus;
+};
+
+const formatCountdown = (ms) => {
+  if (ms <= 0) return "00:00:00";
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return [hours, minutes, seconds].map((v) => String(v).padStart(2, "0")).join(":");
+};
+
+const normalizeOrderReceipt = (order) => {
+  const receiptData = order?.receipt || null;
+  const sourceItems = Array.isArray(receiptData?.items) ? receiptData.items : (order?.items || []);
+  const items = sourceItems.map((item) => ({
+    productId: item.productId || item.id || null,
+    name: item.name || "",
+    quantity: Number(item.quantity || 0),
+    price: Number(item.price || 0),
+    image: item.image || "",
+  }));
+
+  return {
+    id: receiptData?.receiptNumber || order?.id || order?._id || "",
+    date: receiptData?.issuedAt || order?.date || new Date().toISOString(),
+    username: receiptData?.buyer || order?.username || "",
+    paymentMethod: receiptData?.paymentMethod || "online",
+    items,
+    total: Number(receiptData?.total ?? order?.total ?? 0),
+    totalItems: Number(receiptData?.totalItems ?? order?.totalItems ?? items.reduce((sum, item) => sum + item.quantity, 0)),
+    pickupDate: receiptData?.pickupDate || order?.pickupDate || "",
+    deliveryMethod: receiptData?.deliveryMethod || order?.deliveryMethod || "pickup",
+    deliveryAddress: receiptData?.deliveryAddress || order?.deliveryAddress || "",
+    pickupAddress: receiptData?.pickupAddress || order?.pickupAddress || "",
+  };
+};
+
 const Profile = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { user, token, avatarSrc, logout: authLogout, updateProfile: storeUpdateProfile, setAvatar } = useAuth();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [tab, setTab] = useState("info");
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ username: "", email: "", phone: "" });
@@ -48,6 +134,9 @@ const Profile = () => {
   const [balance, setBalance] = useState(user?.balance || 0);
   const [topUpAmount, setTopUpAmount] = useState(0);
   const [topUpLoading, setTopUpLoading] = useState(false);
+  const [expandedReceiptOrderId, setExpandedReceiptOrderId] = useState("");
+  const [receiptLoadingOrderId, setReceiptLoadingOrderId] = useState("");
+  const [nowTs, setNowTs] = useState(Date.now());
 
   useEffect(() => {
     if (user && typeof user.balance === 'number') setBalance(user.balance);
@@ -62,8 +151,15 @@ const Profile = () => {
         }
       }).catch(() => {});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setNowTs(Date.now());
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   const reload = useCallback(async () => {
     let loadedOrders = [];
@@ -81,10 +177,14 @@ const Profile = () => {
           total: o.total,
           totalItems: o.totalItems,
           status: o.status,
+          paidAt: o.paidAt || o.createdAt || "",
+          shippedAt: o.shippedAt || "",
+          deliveryDate: o.deliveryDate || "",
           pickupDate: o.pickupDate || '',
           deliveryMethod: o.deliveryMethod || 'pickup',
           deliveryAddress: o.deliveryAddress || '',
           pickupAddress: o.pickupAddress || '',
+          receipt: o.receipt || null,
           _fromApi: true,
         }));
       } catch {
@@ -267,6 +367,72 @@ const Profile = () => {
     }
   };
 
+  const statusLabel = (status) => {
+    if (status === "delivered") {
+      if (lang === "ru") return "Получен";
+      if (lang === "kk") return "Алынды";
+      return "Received";
+    }
+    return t(`profile.status_${status}`);
+  };
+
+  const receiptShowLabel = lang === "ru" ? "Показать чек" : (lang === "kk" ? "Чекті көру" : "View receipt");
+  const receiptHideLabel = lang === "ru" ? "Скрыть чек" : (lang === "kk" ? "Чекті жабу" : "Hide receipt");
+  const statusEtaPrefix = lang === "ru" ? "До статуса" : (lang === "kk" ? "Келесі мәртебеге дейін" : "Until status");
+
+  const getStatusCountdown = (order, effectiveStatus) => {
+    if (effectiveStatus === "cancelled" || effectiveStatus === "delivered") return null;
+
+    const now = Number(nowTs || Date.now());
+    const deliveryDate = getOrderDeliveryDate(order);
+    if (!deliveryDate) return null;
+
+    if (effectiveStatus === "paid") {
+      const shippedAt = parseDateSafe(order?.shippedAt) || new Date(deliveryDate.getTime() - DAY_MS);
+      const msLeft = shippedAt.getTime() - now;
+      if (msLeft <= 0) return null;
+      return {
+        nextStatus: "shipped",
+        left: formatCountdown(msLeft),
+      };
+    }
+
+    if (effectiveStatus === "shipped") {
+      const msLeft = deliveryDate.getTime() - now;
+      if (msLeft <= 0) return null;
+      return {
+        nextStatus: "delivered",
+        left: formatCountdown(msLeft),
+      };
+    }
+
+    return null;
+  };
+
+  const handleToggleReceipt = async (order) => {
+    const orderId = String(order.id);
+
+    if (expandedReceiptOrderId === orderId) {
+      setExpandedReceiptOrderId("");
+      return;
+    }
+
+    if (!order.receipt && order._fromApi && token) {
+      setReceiptLoadingOrderId(orderId);
+      try {
+        const receipt = await getOrderReceipt(order.id);
+        setOrders((prev) =>
+          prev.map((o) => (String(o.id) === orderId ? { ...o, receipt } : o))
+        );
+      } catch {
+      } finally {
+        setReceiptLoadingOrderId("");
+      }
+    }
+
+    setExpandedReceiptOrderId(orderId);
+  };
+
   return (
     <div className={styles.container}>
       {showAvatarPicker && (
@@ -420,8 +586,13 @@ const Profile = () => {
           ) : (
             <div className={styles.ordersList}>
               {userOrders.slice().reverse().map((o) => {
-                const STATUSES = ["paid", "shipped", "delivered"];
-                const statusIdx = o.status === "cancelled" ? -1 : STATUSES.indexOf(o.status);
+                const effectiveStatus = getTimedStatus(o, nowTs);
+                const statusIdx = effectiveStatus === "cancelled" ? -1 : ORDER_STATUSES.indexOf(effectiveStatus);
+                const countdown = getStatusCountdown(o, effectiveStatus);
+                const receiptView = normalizeOrderReceipt(o);
+                const orderId = String(o.id);
+                const isReceiptOpen = expandedReceiptOrderId === orderId;
+                const isReceiptLoading = receiptLoadingOrderId === orderId;
                 return (
                 <div key={o.id} className={styles.orderCard}>
                   <div className={styles.orderHeader}>
@@ -429,16 +600,16 @@ const Profile = () => {
                     <span className={styles.orderDate}>{fmtDate(o.date)}</span>
                   </div>
 
-                  {o.status !== "cancelled" && (
+                  {effectiveStatus !== "cancelled" && (
                     <div className={styles.trackingBar}>
-                      {STATUSES.map((s, i) => (
+                      {ORDER_STATUSES.map((s, i) => (
                         <div key={s} className={`${styles.trackingStep} ${i <= statusIdx ? styles.trackingStepDone : ""} ${i === statusIdx ? styles.trackingStepCurrent : ""}`}>
                           <div className={styles.trackingDot} />
-                          <span>{t(`profile.status_${s}`)}</span>
+                          <span>{statusLabel(s)}</span>
                         </div>
                       ))}
                       <div className={styles.trackingLine}>
-                        <div className={styles.trackingLineFill} style={{ width: statusIdx >= 0 ? `${(statusIdx / (STATUSES.length - 1)) * 100}%` : "0%" }} />
+                        <div className={styles.trackingLineFill} style={{ width: statusIdx >= 0 ? `${(statusIdx / (ORDER_STATUSES.length - 1)) * 100}%` : "0%" }} />
                       </div>
                     </div>
                   )}
@@ -462,6 +633,11 @@ const Profile = () => {
                       {t("profile.pickupDate")}: {new Date(o.pickupDate).toLocaleDateString("ru-RU")}
                     </div>
                   )}
+                  {countdown && (
+                    <div className={styles.orderEta}>
+                      {statusEtaPrefix} "{statusLabel(countdown.nextStatus)}": {countdown.left}
+                    </div>
+                  )}
                   <div className={styles.orderItems}>
                     {(o.items || []).map((item, idx) => (
                       <div key={idx} className={styles.orderItem}>
@@ -477,11 +653,36 @@ const Profile = () => {
                   <div className={styles.orderFooter}>
                     <span>{t("profile.orderItems")}: {o.totalItems || 0}</span>
                     <span className={styles.orderTotal}>{t("profile.orderTotal")}: {formatKzt(kzt(o, o.total))}</span>
-                    {o.status !== "cancelled" && (
+                    <button className={styles.receiptBtn} onClick={() => handleToggleReceipt(o)} disabled={isReceiptLoading}>
+                      {isReceiptLoading ? "..." : isReceiptOpen ? receiptHideLabel : receiptShowLabel}
+                    </button>
+                    {effectiveStatus !== "cancelled" && (
                       <button className={styles.refundBtn} onClick={() => handleRefund(o.id)}>{t("profile.refund")}</button>
                     )}
-                    {o.status === "cancelled" && <span className={styles.orderCancelled}>{t("profile.refunded")}</span>}
+                    {effectiveStatus === "cancelled" && <span className={styles.orderCancelled}>{t("profile.refunded")}</span>}
                   </div>
+                  {isReceiptOpen && (
+                    <div className={styles.orderReceipt}>
+                      <div className={styles.orderReceiptMeta}>
+                        <div><span>{t("cart.receiptNumber")}:</span><strong>{receiptView.id}</strong></div>
+                        <div><span>{t("cart.receiptDate")}:</span><strong>{fmtDate(receiptView.date)}</strong></div>
+                        <div><span>{t("cart.receiptBuyer")}:</span><strong>{receiptView.username || user.username}</strong></div>
+                        <div><span>{t("cart.receiptPayment")}:</span><strong>{t("cart.receiptOnline")}</strong></div>
+                      </div>
+                      <div className={styles.orderReceiptItems}>
+                        {receiptView.items.map((item, idx) => (
+                          <div key={`${item.productId || item.name}-${idx}`} className={styles.orderReceiptItem}>
+                            <span>{item.name}</span>
+                            <span>{item.quantity} x {formatKzt(item.price)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className={styles.orderReceiptTotal}>
+                        <span>{t("cart.receiptTotal")}</span>
+                        <strong>{formatKzt(receiptView.total)}</strong>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 );
               })}

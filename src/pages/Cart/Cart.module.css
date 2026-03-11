@@ -49,6 +49,11 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes cartButtonAppear {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .emptyIcon {
   margin-bottom: 1.5rem;
   opacity: 0.4;
@@ -77,6 +82,7 @@
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.25s;
+  animation: cartButtonAppear 0.35s ease both;
 }
 
 .emptyBtn:hover {
@@ -319,6 +325,7 @@
   cursor: pointer;
   transition: all 0.25s;
   margin-bottom: 0.8rem;
+  animation: cartButtonAppear 0.35s ease both;
 }
 
 .checkoutBtn:hover:not(:disabled) {
@@ -355,6 +362,7 @@
   cursor: pointer;
   transition: all 0.25s;
   font-size: 0.9rem;
+  animation: cartButtonAppear 0.35s ease both;
 }
 
 .continueShopping:hover:not(:disabled) {
@@ -563,6 +571,7 @@
   cursor: pointer;
   transition: all 0.2s;
   font-family: 'Inter', Arial, sans-serif;
+  animation: cartButtonAppear 0.35s ease both;
 }
 
 .printBtn:hover {
@@ -581,6 +590,7 @@
   cursor: pointer;
   transition: all 0.2s;
   font-family: 'Inter', Arial, sans-serif;
+  animation: cartButtonAppear 0.35s ease both;
 }
 
 .closeReceiptBtn:hover {
@@ -597,6 +607,7 @@
 [data-theme="light"] .printBtn:hover,
 [data-theme="light"] .closeReceiptBtn:hover {
   background: #000;
+  border-color: #000;
 }
 
 @media (max-width: 480px) {
@@ -917,7 +928,8 @@
   color: var(--text-primary);
   font-size: 0.85rem;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
+  animation: cartButtonAppear 0.28s ease both;
 }
 
 .pickupOption svg {
@@ -937,6 +949,27 @@
 .pickupOptionActive {
   border-color: var(--text-primary);
   background: var(--bg-card);
+}
+
+.pickupOption:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .pickupOption {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+[data-theme="light"] .pickupOption svg,
+[data-theme="light"] .pickupOption small {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+[data-theme="light"] .pickupOptionActive {
+  background: #000;
+  border-color: #000;
 }
 
 .pickupDateOption {
@@ -977,6 +1010,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  animation: cartButtonAppear 0.35s ease both;
 }
 
 .deliveryBtnActive {
@@ -984,6 +1018,11 @@
   background: #f2f2f2;
   color: #000;
   font-weight: 600;
+}
+
+.deliveryBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
 }
 
 [data-theme="light"] .deliveryBtn {

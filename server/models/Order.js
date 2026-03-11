@@ -16,6 +16,11 @@ const orderSchema = new mongoose.Schema({
   deliveryMethod: { type: String, enum: ['pickup', 'courier'], default: 'pickup' },
   deliveryAddress: { type: String, default: '' },
   pickupAddress: { type: String, default: '' },
+  paidAt: { type: Date, default: Date.now },
+  shippedAt: { type: Date, default: null },
+  deliveryDate: { type: Date, default: null },
+  deliveredAt: { type: Date, default: null },
+  receiptId: { type: mongoose.Schema.Types.ObjectId, ref: 'Receipt', default: null },
   status: {
     type: String,
     enum: ['pending', 'paid', 'shipped', 'delivered', 'cancelled'],

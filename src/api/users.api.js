@@ -69,6 +69,11 @@ export async function getMyOrders() {
   return data;
 }
 
+export async function getOrderReceipt(orderId) {
+  const { data } = await api.get(`/api/orders/${orderId}/receipt`);
+  return data;
+}
+
 export async function getAllOrders() {
   const { data } = await api.get('/api/orders/all');
   return data;

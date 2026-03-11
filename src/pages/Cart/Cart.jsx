@@ -51,7 +51,6 @@ const Cart = () => {
         })
         .catch(() => {});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const total = cart.reduce((sum, item) => sum + toPriceKzt(item.price) * item.quantity, 0);
@@ -139,6 +138,11 @@ const Cart = () => {
         deliveryAddress: deliveryMethod === "courier" ? courierAddress.trim() : "",
         pickupAddress: deliveryMethod === "pickup" ? selectedPoint.address : "",
         pickupHours: deliveryMethod === "pickup" ? selectedPoint.hours : "",
+        status: apiOrder.status || "paid",
+        paidAt: apiOrder.paidAt || apiOrder.createdAt || new Date().toISOString(),
+        shippedAt: apiOrder.shippedAt || null,
+        deliveryDate: apiOrder.deliveryDate || null,
+        receipt: apiOrder.receipt || null,
         _fromApi: true,
       };
 
@@ -150,7 +154,7 @@ const Cart = () => {
 
       clearCart();
       window.dispatchEvent(new Event("orders:changed"));
-      setReceipt(order);
+      setReceipt(normalizeReceipt(order));
     } catch (err) {
       if (err?.response?.data?.code === "INSUFFICIENT_FUNDS") {
         const bal = err.response.data.balance ?? 0;
@@ -217,6 +221,33 @@ const Cart = () => {
     const d = new Date(iso);
     return d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }) +
       " " + d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const normalizeReceipt = (orderLike) => {
+    const receiptData = orderLike?.receipt || null;
+    const sourceItems = Array.isArray(receiptData?.items) ? receiptData.items : (orderLike?.items || []);
+    const items = sourceItems.map((item) => ({
+      productId: item.productId || item.id || null,
+      name: item.name || "",
+      price: Number(item.price || 0),
+      quantity: Number(item.quantity || 0),
+      image: item.image || "",
+    }));
+
+    return {
+      id: receiptData?.receiptNumber || orderLike?.id || orderLike?._id || Date.now(),
+      date: receiptData?.issuedAt || orderLike?.date || orderLike?.createdAt || new Date().toISOString(),
+      username: receiptData?.buyer || orderLike?.username || t("cart.guest"),
+      paymentMethod: receiptData?.paymentMethod || "online",
+      items,
+      total: Number(receiptData?.total ?? orderLike?.total ?? 0),
+      totalItems: Number(receiptData?.totalItems ?? orderLike?.totalItems ?? items.reduce((sum, item) => sum + item.quantity, 0)),
+      pickupDate: receiptData?.pickupDate || orderLike?.pickupDate || "",
+      deliveryMethod: receiptData?.deliveryMethod || orderLike?.deliveryMethod || "pickup",
+      deliveryAddress: receiptData?.deliveryAddress || orderLike?.deliveryAddress || "",
+      pickupAddress: receiptData?.pickupAddress || orderLike?.pickupAddress || "",
+      pickupHours: receiptData?.pickupHours || orderLike?.pickupHours || "",
+    };
   };
 
   const isListedId = (id) => /^[a-f0-9]{24}$/i.test(String(id ?? ''));
