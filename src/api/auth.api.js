@@ -20,8 +20,7 @@ export async function getMe() {
 export async function logout() {
   try {
     await api.post('/api/auth/logout');
-  } catch {
-  }
+  } catch { /* ignore */ }
   localStorage.removeItem('token');
   localStorage.removeItem('currentUser');
 }

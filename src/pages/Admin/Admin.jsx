@@ -36,6 +36,7 @@ const Admin = () => {
   const [orders, setOrders] = useState(() => ls("orders"));
   const [tab, setTab] = useState("stats");
   const [search, setSearch] = useState("");
+  const [expandedOrder, setExpandedOrder] = useState(null);
   const reload = useCallback(() => {
     setUsers(ls("users"));
     setProducts(ls("listedProducts"));
@@ -117,7 +118,6 @@ const Admin = () => {
         (o.items || []).some((i) => (i.name || "").toLowerCase().includes(q))
       )
     : orders;
-  const [expandedOrder, setExpandedOrder] = useState(null);
 
   const TABS = [
     { key: "stats", label: t("admin.tabOverview") },

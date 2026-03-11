@@ -4,6 +4,12 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
 .card {
   border: 1px solid var(--border-color);
   border-radius: 16px;
@@ -98,6 +104,27 @@
   animation: badgeSlideIn 0.4s cubic-bezier(0.22,1,0.36,1) both;
 }
 
+.badgeUsed {
+  display: none;
+}
+
+.ribbonUsed {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: linear-gradient(135deg, #111 0%, #333 100%);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 4px 10px;
+  z-index: 5;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
 @keyframes badgeSlideIn {
   from { opacity: 0; transform: translateX(-8px); }
   to   { opacity: 1; transform: translateX(0); }
@@ -150,7 +177,6 @@
   border: 2px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
-  font-size: 1.25rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -162,6 +188,13 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
   transform: scale(0.5);
   opacity: 0;
+}
+
+.overlayFav svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .card:hover .overlayFav {
@@ -176,10 +209,19 @@
   border-color: #fff;
 }
 
+.overlayFav:hover svg {
+  transform: scale(1.08);
+}
+
 .overlayFavActive {
   background: #fff !important;
   color: #000 !important;
   border-color: #fff !important;
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.32);
+}
+
+.overlayFavActive svg {
+  animation: heartBeat 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .overlayView {
@@ -245,6 +287,75 @@
   background: #fff;
   color: #000;
   border-color: #fff;
+}
+
+[data-theme="dark"] .overlayFav {
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+
+[data-theme="dark"] .overlayFav:hover {
+  background: #f2f2f2;
+  color: #000;
+  border-color: #fff;
+}
+
+[data-theme="dark"] .overlayFavActive {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .overlayView,
+[data-theme="dark"] .overlayCart {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+
+[data-theme="dark"] .overlayView:hover,
+[data-theme="dark"] .overlayCart:hover {
+  background: #f2f2f2;
+  color: #000;
+  border-color: #fff;
+}
+
+[data-theme="light"] .overlayFav {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+  box-shadow: 0 2px 10px rgba(17, 17, 17, 0.18);
+}
+
+[data-theme="light"] .overlayFav:hover {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+
+[data-theme="light"] .overlayFavActive {
+  background: #111 !important;
+  color: #fff !important;
+  border-color: #111 !important;
+  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.2);
+}
+
+[data-theme="light"] .overlayView,
+[data-theme="light"] .overlayCart {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+  box-shadow: 0 4px 14px rgba(17, 17, 17, 0.14);
+}
+
+[data-theme="light"] .overlayView:hover,
+[data-theme="light"] .overlayCart:hover {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.2);
 }
 .details {
   padding: 14px 16px 8px;
@@ -335,10 +446,10 @@
 
   .actionsTop {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     align-items: center;
     justify-content: center;
-    padding: 0 10px 6px;
+    padding: 2px 10px 8px;
     width: 100%;
   }
 
@@ -353,55 +464,116 @@
     display: inline-flex;
     width: 40px;
     height: 36px;
-    background: var(--bg-card);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    background: #fff;
+    color: #111;
+    border: 1px solid #fff;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 700;
     font-size: 1.1rem;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all 0.22s;
     flex: 0 0 auto;
+    overflow: hidden;
+    box-shadow: none;
   }
 
-  .favBtn:hover { background: #000; color: #fff; border-color: #000; }
-  .favActive { background: #000; color: #fff; border-color: #000; }
+  .favBtn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    transition: transform 0.2s ease;
+  }
+
+  .favBtn:hover { background: #f2f2f2; color: #000; border-color: #fff; }
+  .favBtn:hover svg { transform: scale(1.08); }
+  .favActive { background: #fff; color: #0a0a0a; border-color: #fff; box-shadow: none; }
+  .favActive svg { animation: heartBeat 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
 
   .cartBtn {
     display: block;
     flex: 1;
     min-width: 100px;
     padding: 10px 12px;
-    background: #000;
-    color: #fff;
-    border: none;
+    background: #fff;
+    color: #111;
+    border: 1px solid #fff;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 700;
-    transition: all 0.2s;
+    min-height: 36px;
+    transition: all 0.22s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
   }
 
-  .cartBtn:hover { opacity: 0.9; }
+  .cartBtn:hover { transform: translateY(-1px); background: #f2f2f2; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2); }
 
   .viewBtn {
     display: block;
     width: 100%;
     max-width: 220px;
     padding: 9px 12px;
-    background: var(--bg-card);
-    color: var(--text-primary);
+    background: #fff;
+    color: #111;
     text-decoration: none;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 700;
-    border: 1px solid var(--border-color);
+    border: 1px solid #fff;
     text-align: center;
-    transition: all 0.2s;
+    min-height: 36px;
+    transition: all 0.22s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   }
 
-  .viewBtn:hover { background: var(--bg-hover); border-color: var(--border-light); }
+  .viewBtn:hover { background: #f2f2f2; border-color: #fff; color: #000; }
+
+  [data-theme="light"] .favBtn {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+    box-shadow: none;
+  }
+
+  [data-theme="light"] .favBtn:hover {
+    background: #000;
+    border-color: #000;
+    color: #fff;
+  }
+
+  [data-theme="light"] .favActive {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+    box-shadow: none;
+  }
+
+  [data-theme="light"] .cartBtn {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+    box-shadow: 0 6px 16px rgba(17, 17, 17, 0.15);
+  }
+
+  [data-theme="light"] .cartBtn:hover {
+    transform: translateY(-1px);
+    background: #000;
+    box-shadow: 0 9px 20px rgba(17, 17, 17, 0.2);
+  }
+
+  [data-theme="light"] .viewBtn {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+    box-shadow: 0 6px 16px rgba(17, 17, 17, 0.15);
+  }
+
+  [data-theme="light"] .viewBtn:hover {
+    background: #000;
+    border-color: #000;
+    color: #fff;
+  }
 }
 
 @media (max-width: 480px) {
@@ -436,12 +608,12 @@
   }
 
   .actionsTop {
-    gap: 4px;
-    padding: 0 8px 4px;
+    gap: 6px;
+    padding: 2px 8px 5px;
   }
 
   .actionsBottom {
-    padding: 0 8px 8px;
+    padding: 0 8px 9px;
   }
 
   .favBtn {
@@ -452,14 +624,14 @@
 
   .cartBtn {
     min-width: 0;
-    padding: 6px 8px;
-    font-size: 0.8rem;
+    padding: 7px 8px;
+    font-size: 0.82rem;
     border-radius: 6px;
   }
 
   .viewBtn {
-    padding: 6px 8px;
-    font-size: 0.8rem;
+    padding: 7px 8px;
+    font-size: 0.82rem;
     border-radius: 6px;
   }
 }

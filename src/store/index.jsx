@@ -15,4 +15,5 @@ const StoreProvider = ({ children }) => (
   </AuthProvider>
 );
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { StoreProvider, useAuth, useCart, useFavorites, useData };

@@ -118,6 +118,7 @@ const normalizeProduct = (p) => {
     image,
     images,
     description: p.description || "",
+    _fromApi: true,
   };
 };
 

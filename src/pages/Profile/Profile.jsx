@@ -6,7 +6,7 @@ import { useToast } from "../../components/Toast/Toast";
 import AvatarPicker from "../../components/AvatarPicker/AvatarPicker";
 import { mockProducts } from "../../data/mockProducts";
 import { getProducts } from "../../api/products.api";
-import formatPrice, { formatKzt } from "../../utils/formatPrice";
+import formatPrice, { formatKzt, toPriceKzt } from "../../utils/formatPrice";
 import { updateProfile as apiUpdateProfile, getMyOrders, getMyListedProducts, deleteListedProduct, getProfile } from "../../api/users.api";
 import { logout as apiLogout } from "../../api/auth.api";
 import { useAuth } from "../../store";
@@ -62,6 +62,7 @@ const Profile = () => {
         }
       }).catch(() => {});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const reload = useCallback(async () => {
@@ -113,7 +114,7 @@ const Profile = () => {
     }
 
     setOrders(loadedOrders);
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     reload()
@@ -197,7 +198,7 @@ const Profile = () => {
 
     try {
       if (token) await deleteListedProduct(id);
-    } catch {  }
+    } catch { /* ignore */ }
 
     const updated = myProducts.filter((p) => p.id !== id);
     save("listedProducts", updated);
@@ -214,7 +215,8 @@ const Profile = () => {
         return oid === uid;
       })
     : [];
-  const totalSpent = userOrders.reduce((s, o) => s + (o.total || 0), 0);
+  const kzt = (o, v) => o._fromApi ? v : toPriceKzt(v);
+  const totalSpent = userOrders.reduce((s, o) => s + kzt(o, o.total || 0), 0);
   const totalBought = userOrders.reduce((s, o) => s + (o.totalItems || 0), 0);
   const initials = (user?.username || "?").slice(0, 2).toUpperCase();
 
@@ -252,11 +254,7 @@ const Profile = () => {
     }
   };
 
-  const handleRefund = async (orderId, order) => {
-    if (!order._fromApi) {
-      toast(t("profile.refundLocalError"), "error");
-      return;
-    }
+  const handleRefund = async (orderId) => {
     try {
       const { balance: newBalance } = await refundOrder(orderId);
       setBalance(newBalance);
@@ -470,17 +468,17 @@ const Profile = () => {
                         {item.image && <img src={item.image} alt="" className={styles.orderImg} />}
                         <div className={styles.orderItemInfo}>
                           <span className={styles.orderItemName}>{item.name}</span>
-                          <span className={styles.orderItemQty}>{item.quantity} × {formatKzt(item.price)}</span>
+                          <span className={styles.orderItemQty}>{item.quantity} × {formatKzt(kzt(o, item.price))}</span>
                         </div>
-                        <div className={styles.orderItemTotal}>{formatKzt(item.price * item.quantity)}</div>
+                        <div className={styles.orderItemTotal}>{formatKzt(kzt(o, item.price) * item.quantity)}</div>
                       </div>
                     ))}
                   </div>
                   <div className={styles.orderFooter}>
                     <span>{t("profile.orderItems")}: {o.totalItems || 0}</span>
-                    <span className={styles.orderTotal}>{t("profile.orderTotal")}: {formatKzt(o.total)}</span>
+                    <span className={styles.orderTotal}>{t("profile.orderTotal")}: {formatKzt(kzt(o, o.total))}</span>
                     {o.status !== "cancelled" && (
-                      <button className={styles.refundBtn} onClick={() => handleRefund(o.id, o)}>{t("profile.refund")}</button>
+                      <button className={styles.refundBtn} onClick={() => handleRefund(o.id)}>{t("profile.refund")}</button>
                     )}
                     {o.status === "cancelled" && <span className={styles.orderCancelled}>{t("profile.refunded")}</span>}
                   </div>

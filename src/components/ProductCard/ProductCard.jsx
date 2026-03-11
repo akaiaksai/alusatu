@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import styles from "./ProductCard.module.css";
 import formatPrice from "../../utils/formatPrice";
@@ -8,21 +8,34 @@ import { useTranslation } from "../../i18n";
 import { translateProduct } from "../../utils/productTranslation";
 
 const getCategoryFallbackImage = (category, seed) => {
-  const c = (category || "").toLowerCase();
+  const c = String(category || "").toLowerCase();
   const sig = encodeURIComponent(String(seed ?? "0"));
 
-  if (c.includes("телефон")) return `https://source.unsplash.com/featured/800x800?phone&sig=${sig}`;
-  if (c.includes("ноут")) return `https://source.unsplash.com/featured/800x800?laptop&sig=${sig}`;
-  if (c.includes("электрон")) return `https://source.unsplash.com/featured/800x800?electronics&sig=${sig}`;
-  if (c.includes("одеж")) return `https://source.unsplash.com/featured/800x800?clothing&sig=${sig}`;
-  if (c.includes("обув")) return `https://source.unsplash.com/featured/800x800?shoes&sig=${sig}`;
-  if (c.includes("час")) return `https://source.unsplash.com/featured/800x800?watch&sig=${sig}`;
-  if (c.includes("сум")) return `https://source.unsplash.com/featured/800x800?bag&sig=${sig}`;
-  if (c.includes("аксесс")) return `https://source.unsplash.com/featured/800x800?accessories&sig=${sig}`;
-  if (c.includes("дом") || c.includes("сад")) return `https://source.unsplash.com/featured/800x800?home&sig=${sig}`;
+  if (/(phone|smart|\u0442\u0435\u043b\u0435\u0444\u043e\u043d)/i.test(c)) return `https://source.unsplash.com/featured/800x800?phone&sig=${sig}`;
+  if (/(laptop|notebook|\u043d\u043e\u0443\u0442)/i.test(c)) return `https://source.unsplash.com/featured/800x800?laptop&sig=${sig}`;
+  if (/(electronics|\u044d\u043b\u0435\u043a\u0442\u0440\u043e\u043d)/i.test(c)) return `https://source.unsplash.com/featured/800x800?electronics&sig=${sig}`;
+  if (/(clothing|fashion|\u043e\u0434\u0435\u0436)/i.test(c)) return `https://source.unsplash.com/featured/800x800?clothing&sig=${sig}`;
+  if (/(shoes|footwear|\u043e\u0431\u0443\u0432)/i.test(c)) return `https://source.unsplash.com/featured/800x800?shoes&sig=${sig}`;
+  if (/(watch|\u0447\u0430\u0441)/i.test(c)) return `https://source.unsplash.com/featured/800x800?watch&sig=${sig}`;
+  if (/(bag|\u0441\u0443\u043c)/i.test(c)) return `https://source.unsplash.com/featured/800x800?bag&sig=${sig}`;
+  if (/(accessor|\u0430\u043a\u0441\u0435\u0441\u0441)/i.test(c)) return `https://source.unsplash.com/featured/800x800?accessories&sig=${sig}`;
+  if (/(home|garden|\u0434\u043e\u043c|\u0441\u0430\u0434)/i.test(c)) return `https://source.unsplash.com/featured/800x800?home&sig=${sig}`;
 
   return `https://source.unsplash.com/featured/800x800?product&sig=${sig}`;
 };
+
+const HeartIcon = ({ filled = false }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      d="M12.1 20.3l-.1.1-.1-.1C7 15.8 4 13 4 9.8 4 7.3 5.9 5.4 8.4 5.4c1.5 0 2.9.7 3.8 1.9.9-1.2 2.3-1.9 3.8-1.9 2.5 0 4.4 1.9 4.4 4.4 0 3.2-3 6-7.9 10.5z"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 const ProductCard = ({ product }) => {
   const toast = useToast();
@@ -34,8 +47,6 @@ const ProductCard = ({ product }) => {
   const isBannedImage =
     typeof product?.image === "string" &&
     (product.image.includes("/sparkle.png") || /placeholder\.com/.test(product.image));
-
-  const productIdKey = String(product?.id);
 
   const [isHidden, setIsHidden] = useState(() => !product?.image || isBannedImage);
   const [isFav, setIsFav] = useState(() => isFavorite(product?.id));
@@ -96,9 +107,13 @@ const ProductCard = ({ product }) => {
 
   const discountPercent = product.discountPercentage ? Math.round(product.discountPercentage) : 0;
   const isNew = product.id && (typeof product.id === "number" ? product.id % 7 === 0 : false);
+  const isUsed = /^[a-f0-9]{24}$/i.test(String(product?.id ?? ""));
 
   return (
     <div className={`${styles.card} card-reveal`}>
+      {isUsed && !product.sold && (
+        <span className={styles.ribbonUsed}>USED</span>
+      )}
       <div className={styles.imageWrap}>
         <div className={styles.badges}>
           {product.sold && (
@@ -107,7 +122,7 @@ const ProductCard = ({ product }) => {
           {discountPercent > 0 && (
             <span className={styles.badgeSale}>-{discountPercent}%</span>
           )}
-          {isNew && <span className={styles.badgeNew}>New</span>}
+          {isNew && <span className={styles.badgeNew}>NEW</span>}
         </div>
 
         <img
@@ -125,7 +140,7 @@ const ProductCard = ({ product }) => {
             onClick={handleToggleFavorite}
             title={t("productCard.favorite")}
           >
-            {isFav ? "★" : "☆"}
+            <HeartIcon filled={isFav} />
           </button>
 
           <Link to={`/product/${product.id}`} className={styles.overlayView} title={t("productCard.view")}>
@@ -148,7 +163,7 @@ const ProductCard = ({ product }) => {
         {tp.description && (
           <p className={styles.preview}>
             {tp.description.slice(0, 80)}
-            {tp.description.length > 80 ? "…" : ""}
+            {tp.description.length > 80 ? "..." : ""}
           </p>
         )}
         <p className={styles.price}>{formatPrice(product.price)}</p>
@@ -162,7 +177,7 @@ const ProductCard = ({ product }) => {
           onClick={handleToggleFavorite}
           title={t("productCard.addToFavorite")}
         >
-          {isFav ? "★" : "☆"}
+          <HeartIcon filled={isFav} />
         </button>
 
         <button

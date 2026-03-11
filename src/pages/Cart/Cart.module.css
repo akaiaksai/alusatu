@@ -69,9 +69,9 @@
 
 .emptyBtn {
   padding: 14px 32px;
-  background: #000;
-  color: #fff;
-  border: none;
+  background: #fff;
+  color: #111;
+  border: 1px solid #fff;
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.95rem;
@@ -80,9 +80,19 @@
 }
 
 .emptyBtn:hover {
-  background: #333;
+  background: #f2f2f2;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+[data-theme="light"] .emptyBtn {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+[data-theme="light"] .emptyBtn:hover {
+  background: #000;
 }
 .shippingBar {
   background: var(--bg-secondary);
@@ -113,9 +123,13 @@
 
 .progressFill {
   height: 100%;
-  background: #000;
+  background: linear-gradient(90deg, #555, #fff);
   border-radius: 10px;
   transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme="light"] .progressFill {
+  background: linear-gradient(90deg, #888, #000);
 }
 .cartLayout {
   display: grid;
@@ -296,9 +310,9 @@
   display: block;
   width: 100%;
   padding: 14px;
-  background: #000;
-  color: white;
-  border: none;
+  background: #fff;
+  color: #111;
+  border: 1px solid #fff;
   border-radius: 10px;
   font-weight: 700;
   font-size: 0.95rem;
@@ -308,9 +322,19 @@
 }
 
 .checkoutBtn:hover:not(:disabled) {
-  background: #222;
+  background: #f2f2f2;
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+[data-theme="light"] .checkoutBtn {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+[data-theme="light"] .checkoutBtn:hover:not(:disabled) {
+  background: #000;
 }
 
 .checkoutBtn:disabled,
@@ -323,9 +347,9 @@
   display: block;
   width: 100%;
   padding: 12px;
-  background: transparent;
-  color: var(--text-primary);
-  border: 1.5px solid var(--border-color);
+  background: #fff;
+  color: #111;
+  border: 1.5px solid #fff;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
@@ -334,7 +358,19 @@
 }
 
 .continueShopping:hover:not(:disabled) {
-  border-color: var(--text-primary);
+  background: #f2f2f2;
+  border-color: #fff;
+}
+
+[data-theme="light"] .continueShopping {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+[data-theme="light"] .continueShopping:hover:not(:disabled) {
+  background: #000;
+  border-color: #000;
 }
 @keyframes receiptSlideUp {
   from { opacity: 0; transform: translateY(20px); }
@@ -342,8 +378,8 @@
 }
 
 .receiptInline {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background: #fff;
+  border: 1px solid #e0e0e0;
   border-radius: 16px;
   max-width: 480px;
   width: 100%;
@@ -356,8 +392,8 @@
 .receiptContent {
   padding: 28px 24px 16px;
   font-family: 'Courier New', Courier, monospace;
-  color: var(--text-primary);
-  background: var(--bg-card);
+  color: #000;
+  background: #fff;
   border-radius: 16px 16px 0 0;
 }
 
@@ -460,6 +496,7 @@
   gap: 10px;
   padding: 16px 24px 24px;
   border-top: 1px dashed #ddd;
+  background: #fff;
 }
 
 .pickupInfo {
@@ -517,9 +554,9 @@
 .printBtn {
   flex: 1;
   padding: 12px 16px;
-  background: #000;
-  color: #fff;
-  border: none;
+  background: #fff;
+  color: #111;
+  border: 1px solid #fff;
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.9rem;
@@ -529,15 +566,15 @@
 }
 
 .printBtn:hover {
-  background: #333;
+  background: #f2f2f2;
 }
 
 .closeReceiptBtn {
   flex: 1;
   padding: 12px 16px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1.5px solid var(--border-light);
+  background: #fff;
+  color: #111;
+  border: 1.5px solid #fff;
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.9rem;
@@ -547,7 +584,19 @@
 }
 
 .closeReceiptBtn:hover {
-  background: var(--bg-hover);
+  background: #f2f2f2;
+}
+
+[data-theme="light"] .printBtn,
+[data-theme="light"] .closeReceiptBtn {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+[data-theme="light"] .printBtn:hover,
+[data-theme="light"] .closeReceiptBtn:hover {
+  background: #000;
 }
 
 @media (max-width: 480px) {
@@ -920,10 +969,10 @@
   justify-content: center;
   gap: 0.4rem;
   padding: 10px 14px;
-  border: 1.5px solid var(--border-color);
+  border: 1.5px solid #fff;
   border-radius: 8px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
+  background: #fff;
+  color: #111;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
@@ -931,10 +980,22 @@
 }
 
 .deliveryBtnActive {
-  border-color: var(--text-primary);
-  background: var(--bg-card);
-  color: var(--text-primary);
+  border-color: #fff;
+  background: #f2f2f2;
+  color: #000;
   font-weight: 600;
+}
+
+[data-theme="light"] .deliveryBtn {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+[data-theme="light"] .deliveryBtnActive {
+  background: #000;
+  color: #fff;
+  border-color: #000;
 }
 
 .courierInput {

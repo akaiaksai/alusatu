@@ -51,6 +51,7 @@ const Cart = () => {
         })
         .catch(() => {});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const total = cart.reduce((sum, item) => sum + toPriceKzt(item.price) * item.quantity, 0);
@@ -138,13 +139,14 @@ const Cart = () => {
         deliveryAddress: deliveryMethod === "courier" ? courierAddress.trim() : "",
         pickupAddress: deliveryMethod === "pickup" ? selectedPoint.address : "",
         pickupHours: deliveryMethod === "pickup" ? selectedPoint.hours : "",
+        _fromApi: true,
       };
 
       try {
         const prev = JSON.parse(localStorage.getItem("orders") || "[]");
         prev.push(order);
         localStorage.setItem("orders", JSON.stringify(prev));
-      } catch {}
+      } catch { /* ignore */ }
 
       clearCart();
       window.dispatchEvent(new Event("orders:changed"));

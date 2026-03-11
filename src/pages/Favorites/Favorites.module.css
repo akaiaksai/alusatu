@@ -18,12 +18,25 @@
 }
 
 .count {
-  background: #111;
-  color: #fff;
+  background: #fff;
+  color: #111;
+  border: 1px solid rgba(255, 255, 255, 0.75);
   font-size: 0.85rem;
   font-weight: 600;
   padding: 4px 14px;
   border-radius: 20px;
+}
+
+[data-theme="light"] .count {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+[data-theme="dark"] .count {
+  background: #fff;
+  color: #111;
+  border-color: rgba(255, 255, 255, 0.75);
 }
 
 .grid {
@@ -67,9 +80,9 @@
 }
 
 .emptyBtn {
-  background: #111;
-  color: #fff;
-  border: none;
+  background: #fff;
+  color: #111;
+  border: 1px solid #fff;
   padding: 14px 36px;
   border-radius: 12px;
   font-size: 1rem;
@@ -79,8 +92,18 @@
 }
 
 .emptyBtn:hover {
-  background: #333;
+  background: #f2f2f2;
   transform: translateY(-2px);
+}
+
+[data-theme="light"] .emptyBtn {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+[data-theme="light"] .emptyBtn:hover {
+  background: #000;
 }
 .skeleton {
   border-radius: 16px;

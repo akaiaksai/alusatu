@@ -27,7 +27,7 @@
 .filterRow { display: flex; align-items: flex-end; gap: 2rem; flex-wrap: wrap; }
 .priceFilter { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .priceFilter h3 { margin: 0; font-size: 0.95rem; font-weight: 600; white-space: nowrap; }
-.slider { width: 200px; accent-color: #e8e8e8; }
+.slider { width: 200px; accent-color: var(--range-accent); }
 .sortFilter { display: flex; align-items: center; gap: 10px; }
 .sortFilter h3 { margin: 0; font-size: 0.95rem; font-weight: 600; white-space: nowrap; }
 .sortSelect {
@@ -249,7 +249,7 @@
 }
 
 [data-theme="light"] .filterSection {
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-soft);
 }
 
 [data-theme="light"] .sortSelect {
@@ -258,7 +258,7 @@
 
 [data-theme="light"] .sortSelect:hover,
 [data-theme="light"] .sortSelect:focus {
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-soft);
 }
 
 [data-theme="light"] .skeleton {

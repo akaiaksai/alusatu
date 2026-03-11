@@ -1,29 +1,29 @@
-.heroBtn,
-.heroBtnOutline {
-  /* базовые стили уже есть */
-}
-[data-theme="light"] .heroBtn {
+﻿[data-theme="light"] .heroBtn {
   color: #fff;
-  background: #111;
+  background: linear-gradient(135deg, #111 0%, #333 100%);
   border-color: #111;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 [data-theme="light"] .heroBtn:hover {
   color: #fff;
-  background: #000;
+  background: linear-gradient(135deg, #000 0%, #222 100%);
   border-color: #000;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
 }
 [data-theme="light"] .heroBtnOutline {
-  color: #232323;
-  border-color: #d7d7db;
+  color: #222;
+  border-color: #d5d5d8;
   background: rgba(255, 255, 255, 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 [data-theme="light"] .heroBtnOutline:hover {
-  color: #232323;
+  color: #111;
   background: #fff;
-  border-color: #c8c8cc;
+  border-color: #c0c0c4;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 20px rgba(0, 0, 0, 0.06);
 }
 [data-theme="light"] .heroStatValue {
-  color: #232323;
+  color: #1a1a1a;
 }
 [data-theme="light"] .heroStatLabel {
   color: #888;
@@ -43,10 +43,7 @@
   isolation: isolate;
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  background:
-    radial-gradient(1100px 440px at 50% -10%, rgba(255, 255, 255, 0.06) 0%, transparent 65%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0%, rgba(255, 255, 255, 0) 30%),
-    linear-gradient(135deg, #050505 0%, #090909 52%, #020202 100%);
+  background: #050505;
   color: var(--text-primary);
   padding: 5rem 2rem 4rem;
   text-align: center;
@@ -57,23 +54,56 @@
     0 22px 48px rgba(0, 0, 0, 0.28);
 }
 
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  background: url('/hero-art.jpg') center/cover no-repeat;
+  filter: blur(0.35px) grayscale(0.12) saturate(0.9) contrast(1.02);
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 0;
+  animation: none;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: none;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  animation: none;
+}
+
+
 [data-theme="light"] .hero {
-  border-color: #e0e0e4;
+  border-color: #e7e7eb;
   background:
-    radial-gradient(760px 280px at 50% -8%, rgba(255, 255, 255, 0.3) 0%, transparent 72%),
-    linear-gradient(135deg, #9e9ea3 0%, #a8a8ad 52%, #969699 100%);
+    radial-gradient(120% 95% at 50% 8%, rgba(255, 255, 255, 0.98) 0%, rgba(248, 248, 248, 0.96) 52%, rgba(240, 240, 242, 0.94) 100%),
+    linear-gradient(135deg, #ffffff 0%, #f7f7f8 52%, #efeff1 100%);
   color: var(--text-primary);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 18px 36px rgba(0, 0, 0, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 12px 30px rgba(18, 24, 39, 0.06);
+  backdrop-filter: none;
+}
+
+[data-theme="light"] .hero::before {
+  inset: -2%;
+  opacity: 0.4;
+  background: url('/hero-art.jpg') center/cover no-repeat;
+  filter: invert(1) grayscale(1) brightness(1.72) contrast(0.42);
+  animation: none;
 }
 
 [data-theme="light"] .heroTitle {
-  color: #232323;
+  color: #1a1a1a;
 }
 
 [data-theme="light"] .heroBrand {
-  background: linear-gradient(90deg, #232323, #444, #232323);
+  background: linear-gradient(90deg, #171717, #000000, #171717);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -81,53 +111,49 @@
 }
 
 [data-theme="light"] .heroSubtitle {
-  color: #444;
+  color: #000000;
 }
 
 .heroOverlay {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 18% 22%, rgba(255,255,255,0.04) 0%, transparent 48%),
-    radial-gradient(circle at 82% 18%, rgba(255,255,255,0.03) 0%, transparent 44%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 45%),
-    linear-gradient(120deg, rgba(255,255,255,0.018) 0%, rgba(255,255,255,0) 38%);
-  opacity: 0.7;
+    radial-gradient(ellipse 80% 70% at 50% 45%, transparent 35%, rgba(0,0,0,0.28) 76%, rgba(0,0,0,0.48) 100%);
   pointer-events: none;
+  z-index: 2;
+}
+
+[data-theme="light"] .hero::after {
+  background: none;
+  opacity: 0;
+  animation: none;
 }
 
 [data-theme="light"] .heroOverlay {
   background:
-    radial-gradient(circle at 16% 20%, rgba(0, 0, 0, 0.045) 0%, transparent 46%),
-    radial-gradient(circle at 85% 18%, rgba(0, 0, 0, 0.04) 0%, transparent 42%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.035) 0%, transparent 45%),
-    linear-gradient(120deg, rgba(0, 0, 0, 0.022) 0%, rgba(0, 0, 0, 0) 38%);
-  opacity: 0.8;
+    radial-gradient(ellipse 92% 78% at 50% 36%, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, rgba(247, 247, 247, 0.04) 0%, rgba(255, 255, 255, 0.18) 100%);
 }
 
 .heroContent {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   max-width: 700px;
   margin: 0 auto;
   padding: 1.35rem 1.35rem 1.1rem;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.015) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.03),
-    0 16px 36px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   animation: heroFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 [data-theme="light"] .heroContent {
-  border-color: rgba(0, 0, 0, 0.09);
-  background: linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(247,247,248,0.58) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    0 16px 30px rgba(0, 0, 0, 0.07);
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 @keyframes heroFadeIn {
@@ -147,14 +173,19 @@
   color: rgba(255,255,255,0.86);
   margin-bottom: 1.5rem;
   backdrop-filter: blur(8px);
-  animation: heroFadeIn 0.8s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: heroFadeIn 0.8s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both, heroBadgePulse 4s 2s ease-in-out infinite;
+}
+
+@keyframes heroBadgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.08); }
+  50%      { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
 }
 
 [data-theme="light"] .heroBadge {
-  background: rgba(245,245,246,0.86);
-  border-color: rgba(0, 0, 0, 0.09);
-  color: #4f4f52;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #555;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
 .heroTitle {
@@ -251,14 +282,24 @@
   background: rgba(255, 255, 255, 0.02);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
   animation: heroFadeIn 0.8s 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: border-color 0.4s, background 0.4s;
+}
+
+.heroStats:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 [data-theme="light"] .heroStats {
-  border-color: rgba(0, 0, 0, 0.1);
-  background: rgba(248, 248, 249, 0.58);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.78),
-    0 8px 18px rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+[data-theme="light"] .heroStats:hover {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .heroStat {
@@ -273,6 +314,11 @@
   font-size: 1.6rem;
   font-weight: 800;
   color: #fff;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.heroStat:hover .heroStatValue {
+  transform: scale(1.08);
 }
 
 .heroStatLabel {
@@ -341,6 +387,16 @@
   border-color: var(--border-light);
 }
 
+[data-theme="light"] .filterSection {
+  background: #fff;
+  border-color: #e7e7eb;
+  box-shadow: none;
+}
+
+[data-theme="light"] .filterSection:hover {
+  border-color: #dcdce2;
+}
+
 .filterRow {
   display: flex;
   align-items: flex-end;
@@ -384,6 +440,17 @@
   border-color: var(--border-light);
 }
 
+[data-theme="light"] .sortSelect {
+  background: #ffffff;
+  border-color: #e4e4ea;
+  color: #111;
+}
+
+[data-theme="light"] .sortSelect:focus {
+  border-color: #d4d4dd;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+}
+
 .priceFilter {
   display: flex;
   align-items: center;
@@ -400,8 +467,12 @@
 .slider {
   flex: 1;
   cursor: pointer;
-  accent-color: #000;
+  accent-color: var(--range-accent);
   height: 6px;
+}
+
+[data-theme="light"] .priceLabel {
+  color: #4a4a53;
 }
 .grid {
   display: grid;
@@ -727,3 +798,4 @@
     margin: 0.8rem 0 0.6rem;
   }
 }
+

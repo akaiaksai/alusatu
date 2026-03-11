@@ -13,14 +13,16 @@ const PageTransition = ({ children }) => {
   const timer = useRef(null);
   const latestChildren = useRef(children);
 
-  latestChildren.current = children;
+  useLayoutEffect(() => {
+    latestChildren.current = children;
+  });
 
   useLayoutEffect(() => {
     if (location.key === prevKey.current) return;
 
     if (timer.current) clearTimeout(timer.current);
 
-    setPhase("exit");
+    setPhase("exit"); // eslint-disable-line react-hooks/set-state-in-effect
 
     timer.current = setTimeout(() => {
       prevKey.current = location.key;

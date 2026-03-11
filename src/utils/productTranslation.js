@@ -28,14 +28,15 @@ export function translateCategory(category, t) {
 
 /**
  * Returns translated product fields.
- * Looks up `mockProducts.<id>.name` and `mockProducts.<id>.desc` keys.
+ * API products use `apiProducts.<id>` keys; mock products use `mockProducts.<id>`.
  * Falls back to original product fields if no translation exists.
  */
 export function translateProduct(product, t) {
   if (!product) return product;
   const id = product.id;
-  const nameKey = `mockProducts.${id}.name`;
-  const descKey = `mockProducts.${id}.desc`;
+  const prefix = product._fromApi ? "apiProducts" : "mockProducts";
+  const nameKey = `${prefix}.${id}.name`;
+  const descKey = `${prefix}.${id}.desc`;
 
   const translatedName = t(nameKey);
   const translatedDesc = t(descKey);

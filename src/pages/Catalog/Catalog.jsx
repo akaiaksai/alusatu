@@ -35,11 +35,12 @@ const Catalog = () => {
   const location = useLocation();
   const query = new URLSearchParams(location.search);
   const search = query.get("search") || "";
+  const categoryFromQuery = query.get("category") || "";
   const { t } = useTranslation();
 
   const { products, loading, error } = useData();
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [priceMax, setPriceMax] = useState(PRICE_FILTER_MAX_KZT);
+  const [selectedCategory, setSelectedCategory] = useState(() => categoryFromQuery || "All");
+  const [priceMax] = useState(PRICE_FILTER_MAX_KZT);
   const [priceLimit, setPriceLimit] = useState(PRICE_FILTER_MAX_KZT);
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("default");
@@ -88,13 +89,14 @@ const Catalog = () => {
   const handleCategoryChange = (cat) => { setSelectedCategory(cat); setPage(1); };
   const handlePriceChange = (e) => { setPriceLimit(Math.min(priceMax, Number(e.target.value) || 0)); setPage(1); };
   const handleSortChange = (e) => { setSortBy(e.target.value); setPage(1); };
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setPage(1); }, [search]);
 
   return (
     <div className={styles.container}>
       <h1>{t("catalog.title")}</h1>
 
-      <Categories onFilter={handleCategoryChange} />
+      <Categories onFilter={handleCategoryChange} selectedFilter={selectedCategory} />
 
       <div className={styles.filterSection}>
         <div className={styles.filterRow}>

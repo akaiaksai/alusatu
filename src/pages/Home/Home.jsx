@@ -1,26 +1,25 @@
-import React, { useState, useRef } from "react";
+﻿import React, { useState } from "react";
 import ProductCard from "../../components/ProductCard/ProductCard";
 import Categories from "../../components/Categories/Categories";
 import Pagination from "../../components/Pagination/Pagination";
 import styles from "./Home.module.css";
 import formatPrice, { toPriceKzt } from "../../utils/formatPrice";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "../../components/Toast/Toast";
 import { useData } from "../../store";
 import { useTranslation } from "../../i18n";
 
 const normalizeText = (value) => (value || "").toString().trim().toLowerCase();
 
 const HOME_CATEGORIES = [
-  "Телефоны",
-  "Ноутбуки",
-  "Одежда",
-  "Обувь",
-  "Часы",
-  "Сумки",
-  "Аксессуары",
-  "Электроника",
-  "Дом и сад",
+  "\u0422\u0435\u043b\u0435\u0444\u043e\u043d\u044b",
+  "\u041d\u043e\u0443\u0442\u0431\u0443\u043a\u0438",
+  "\u041e\u0434\u0435\u0436\u0434\u0430",
+  "\u041e\u0431\u0443\u0432\u044c",
+  "\u0427\u0430\u0441\u044b",
+  "\u0421\u0443\u043c\u043a\u0438",
+  "\u0410\u043a\u0441\u0435\u0441\u0441\u0443\u0430\u0440\u044b",
+  "\u042d\u043b\u0435\u043a\u0442\u0440\u043e\u043d\u0438\u043a\u0430",
+  "\u0414\u043e\u043c \u0438 \u0441\u0430\u0434",
 ];
 
 const PRICE_FILTER_MAX_KZT = 1_500_000;
@@ -28,15 +27,13 @@ const ITEMS_PER_PAGE = 20;
 
 const Home = () => {
   const navigate = useNavigate();
-  const toast = useToast();
   const { products: allProductsRaw, loading, error } = useData();
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [priceMax, setPriceMax] = useState(PRICE_FILTER_MAX_KZT);
+  const [priceMax] = useState(PRICE_FILTER_MAX_KZT);
   const [priceLimit, setPriceLimit] = useState(PRICE_FILTER_MAX_KZT);
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("default");
-  const heroRef = useRef(null);
 
   const allowedCategories = new Set(HOME_CATEGORIES);
   const allProducts = allProductsRaw.filter((p) => {
@@ -85,8 +82,7 @@ const Home = () => {
 
   return (
     <div className={styles.container}>
-      {/* Кнопка уведомления удалена */}
-      <div className={styles.hero} ref={heroRef}>
+      <div className={styles.hero}>
         <div className={styles.heroOverlay} />
         <div className={styles.heroContent}>
           <span className={styles.heroBadge}>{t("home.badge")}</span>
@@ -130,7 +126,7 @@ const Home = () => {
                 onChange={handlePriceChange}
                 className={styles.slider}
               />
-              <span className={styles.priceLabel}>{formatPrice(0)} — {formatPrice(priceLimit)}</span>
+              <span className={styles.priceLabel}>{formatPrice(0)} - {formatPrice(priceLimit)}</span>
             </div>
           </div>
           <div className={styles.sortFilter}>
@@ -177,3 +173,5 @@ const Home = () => {
 };
 
 export default Home;
+
+

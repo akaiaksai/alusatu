@@ -13,7 +13,8 @@ const productsRoutes = require('./routes/products');
 
 const app = express();
 
-// CORS — allow specific origins in production, all in dev
+// Trust first proxy (Nginx)
+app.set('trust proxy', 1);
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
   : null;
@@ -22,7 +23,8 @@ app.use(cors({
   origin: allowedOrigins || true,
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 const PORT = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/alu-satu';
@@ -38,6 +40,13 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/products', productsRoutes);
+
+app.use((err, _req, res, next) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Payload too large' });
+  }
+  return next(err);
+});
 
 // Health check
 app.get('/api/health', (req, res) => {

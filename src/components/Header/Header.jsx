@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+﻿import React, { useEffect, useState, useRef, useCallback } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import styles from "./Header.module.css";
 import searchIcon from "../../assets/icons/search.svg";
 import cartIcon from "../../assets/icons/cart.svg";
@@ -36,7 +36,21 @@ const Header = ({ theme, onToggleTheme }) => {
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
-  const closeMenu = () => setMenuOpen(false);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const location = useLocation();
+
+  useEffect(() => {
+    closeMenu(); 
+  }, [location.pathname, closeMenu]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") closeMenu();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [menuOpen, closeMenu]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -192,8 +206,17 @@ const Header = ({ theme, onToggleTheme }) => {
           </button>
         </div>
 
-      {menuOpen && <div className={styles.drawerOverlay} onClick={closeMenu} />}
+      </header>
+
+      <div className={`${styles.drawerOverlay} ${menuOpen ? styles.drawerOverlayOpen : ""}`} onClick={closeMenu} />
       <div className={`${styles.drawer} ${menuOpen ? styles.drawerOpen : ""}`}>
+        <div className={styles.drawerHeader}>
+          <span className={styles.drawerTitle}>Alu Satu</span>
+          <button className={styles.drawerCloseBtn} onClick={closeMenu} aria-label={t("header.menu")}>
+            <span />
+            <span />
+          </button>
+        </div>
         <div className={styles.drawerContent}>
           <Link to="/sell" className={styles.drawerLink} onClick={closeMenu}>{t("header.sell")}</Link>
           <Link to="/favorites" className={styles.drawerLink} onClick={closeMenu}>
@@ -215,10 +238,8 @@ const Header = ({ theme, onToggleTheme }) => {
               {t("header.login")}
             </button>
           )}
-
         </div>
       </div>
-      </header>
 
       {showAuthModal && (
         <div className={styles.modalOverlay} onClick={() => setShowAuthModal(false)}>

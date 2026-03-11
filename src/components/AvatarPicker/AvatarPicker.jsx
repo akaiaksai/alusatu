@@ -26,7 +26,7 @@ const AVATAR_COLORS = [
 const makeInitialAvatar = (initials, bg, fg) => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
     <rect width="120" height="120" rx="60" fill="${bg}"/>
-    <text x="60" y="66" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="44" font-weight="800" fill="${fg}">${initials}</text>
+    <text x="60" y="66" text-anchor="middle" dominant-baseline="middle" alignment-baseline="middle" font-family="system-ui,-apple-system,sans-serif" font-size="44" font-weight="800" fill="${fg}" style="display: block;">${initials}</text>
   </svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };

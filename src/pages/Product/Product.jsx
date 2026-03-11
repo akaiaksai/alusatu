@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+﻿import { useParams, Link } from "react-router-dom";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { mockProducts } from "../../data/mockProducts";
 import styles from "./Product.module.css";
@@ -17,6 +17,16 @@ import { translateProduct } from "../../utils/productTranslation";
 
 const getFallbackImage = (seed) => `https://source.unsplash.com/featured/900x900?product&sig=${encodeURIComponent(String(seed ?? "0"))}`;
 const isNumericId = (value) => /^[0-9]+$/.test(String(value ?? "").trim());
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 4;
+const ZOOM_STEP = 0.25;
+const SWIPE_THRESHOLD = 42;
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const getTouchDistance = (touches) => {
+  if (!touches || touches.length < 2) return 0;
+  const [a, b] = touches;
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+};
 
 const findListedProductById = (routeId) => {
   try {
@@ -36,19 +46,58 @@ const getInitials = (name) => {
     : name.slice(0, 2).toUpperCase();
 };
 
+const StarIcon = ({ filled = false }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      d="M12 3.8l2.4 4.86 5.36.78-3.88 3.78.92 5.34L12 16.14 7.2 18.56l.92-5.34L4.24 9.44l5.36-.78L12 3.8z"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const StarRating = ({ rating, onRate, interactive = false, size = 20 }) => (
-  <div className={styles.stars} style={{ fontSize: size }}>
-    {[1, 2, 3, 4, 5].map((star) => (
-      <span
-        key={star}
-        className={`${styles.star} ${star <= rating ? styles.starFilled : ""}`}
-        onClick={interactive ? () => onRate(star) : undefined}
-        style={interactive ? { cursor: "pointer" } : undefined}
-      >
-        ★
-      </span>
-    ))}
+  <div className={styles.stars} style={{ "--star-size": `${size}px` }}>
+    {[1, 2, 3, 4, 5].map((star) =>
+      interactive ? (
+        <button
+          key={star}
+          type="button"
+          className={`${styles.star} ${star <= rating ? styles.starFilled : ""}`}
+          onClick={() => onRate(star)}
+          aria-label={`Rate ${star}`}
+        >
+          <StarIcon filled={star <= rating} />
+        </button>
+      ) : (
+        <span key={star} className={`${styles.star} ${star <= rating ? styles.starFilled : ""}`}>
+          <StarIcon filled={star <= rating} />
+        </span>
+      ),
+    )}
   </div>
+);
+
+const HeartIcon = ({ filled = false }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      d="M12.1 20.3l-.1.1-.1-.1C7 15.8 4 13 4 9.8 4 7.3 5.9 5.4 8.4 5.4c1.5 0 2.9.7 3.8 1.9.9-1.2 2.3-1.9 3.8-1.9 2.5 0 4.4 1.9 4.4 4.4 0 3.2-3 6-7.9 10.5z"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ZoomIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M16 16l5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
 );
 
 const Product = () => {
@@ -57,22 +106,60 @@ const Product = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [images, setImages] = useState([]);
+  const [slideDir, setSlideDir] = useState(1);
   const [isFav, setIsFav] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [imageTransition, setImageTransition] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [dragOrigin, setDragOrigin] = useState({ x: 0, y: 0 });
   const [activeTab, setActiveTab] = useState("description");
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+
   const imgRef = useRef(null);
+  const viewerStageRef = useRef(null);
+  const panRef = useRef({ x: 0, y: 0 });
+  const touchRef = useRef(null);
+
   const toast = useToast();
   const { user, token } = useAuth();
   const { addToCart } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
   const { t } = useTranslation();
   const tp = product ? translateProduct(product, t) : null;
-  const [reviews, setReviews] = useState([]);
-  const [reviewText, setReviewText] = useState("");
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewAuthor, setReviewAuthor] = useState("");
-  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  const resetViewerTransform = useCallback(() => {
+    setZoom((prev) => (prev === 1 ? prev : 1));
+    setPan((prev) => (prev.x === 0 && prev.y === 0 ? prev : { x: 0, y: 0 }));
+    setIsPanning(false);
+  }, []);
+
+  const clampPan = useCallback((nextPan, nextZoom) => {
+    if (nextZoom <= 1 || !viewerStageRef.current) return { x: 0, y: 0 };
+    const stage = viewerStageRef.current;
+    const limitX = ((nextZoom - 1) * stage.clientWidth) / 2;
+    const limitY = ((nextZoom - 1) * stage.clientHeight) / 2;
+    return {
+      x: clamp(nextPan.x, -limitX, limitX),
+      y: clamp(nextPan.y, -limitY, limitY),
+    };
+  }, []);
+
+  const applyZoom = useCallback((nextZoom) => {
+    const clamped = clamp(nextZoom, ZOOM_MIN, ZOOM_MAX);
+    setZoom(clamped);
+    setPan((curr) => (clamped <= 1 ? { x: 0, y: 0 } : clampPan(curr, clamped)));
+  }, [clampPan]);
+
+  const closeViewer = useCallback(() => {
+    setIsViewerOpen(false);
+    resetViewerTransform();
+  }, [resetViewerTransform]);
+
   const checkFav = useCallback(() => {
     setIsFav(isFavorite(id));
   }, [id, isFavorite]);
@@ -87,27 +174,231 @@ const Product = () => {
     if (added) toast(t("product.addedToFav"), "success");
     else toast(t("product.removedFromFav"), "info");
   };
-  const switchImage = (newIndex) => {
-    if (newIndex === selectedImage || images.length <= 1) return;
-    setImageTransition(true);
-    setTimeout(() => {
-      setSelectedImage(newIndex);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setImageTransition(false));
-      });
-    }, 180);
-  };
 
-  const prevImage = () => switchImage(selectedImage > 0 ? selectedImage - 1 : images.length - 1);
-  const nextImage = () => switchImage(selectedImage < images.length - 1 ? selectedImage + 1 : 0);
+  const switchImage = useCallback((newIndex) => {
+    if (images.length <= 1) return;
+    const normalized = (newIndex + images.length) % images.length;
+    if (normalized === selectedImage) return;
+
+    const forward = (normalized - selectedImage + images.length) % images.length;
+    const backward = (selectedImage - normalized + images.length) % images.length;
+    setSlideDir(forward <= backward ? 1 : -1);
+    resetViewerTransform();
+    setSelectedImage(normalized);
+  }, [images.length, selectedImage, resetViewerTransform]);
+
+  const prevImage = useCallback(() => {
+    if (images.length <= 1) return;
+    switchImage(selectedImage - 1);
+  }, [images.length, selectedImage, switchImage]);
+
+  const nextImage = useCallback(() => {
+    if (images.length <= 1) return;
+    switchImage(selectedImage + 1);
+  }, [images.length, selectedImage, switchImage]);
+
+  const handleViewerWheel = useCallback((e) => {
+    e.preventDefault();
+    applyZoom(zoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+  }, [applyZoom, zoom]);
+
+  const handleViewerDoubleClick = useCallback((e) => {
+    e.preventDefault();
+    applyZoom(zoom > 1 ? 1 : 2);
+  }, [applyZoom, zoom]);
+
+  const startPanning = useCallback((e) => {
+    if (zoom <= 1) return;
+    e.preventDefault();
+    setIsPanning(true);
+    setDragOrigin({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  }, [zoom, pan.x, pan.y]);
+
+  const onPanMove = useCallback((e) => {
+    if (!isPanning || zoom <= 1) return;
+    e.preventDefault();
+    setPan(clampPan({ x: e.clientX - dragOrigin.x, y: e.clientY - dragOrigin.y }, zoom));
+  }, [isPanning, zoom, dragOrigin.x, dragOrigin.y, clampPan]);
+
+  const stopPanning = useCallback(() => {
+    setIsPanning(false);
+  }, []);
+
+  const handleTouchStart = useCallback((e) => {
+    if (e.touches.length === 2) {
+      touchRef.current = {
+        mode: "pinch",
+        startDist: getTouchDistance(e.touches) || 1,
+        startZoom: zoom,
+      };
+      return;
+    }
+
+    if (e.touches.length !== 1) return;
+    const t0 = e.touches[0];
+    if (zoom > 1) {
+      touchRef.current = {
+        mode: "pan",
+        startX: t0.clientX,
+        startY: t0.clientY,
+        basePanX: panRef.current.x,
+        basePanY: panRef.current.y,
+      };
+    } else {
+      touchRef.current = {
+        mode: "swipe",
+        startX: t0.clientX,
+        startY: t0.clientY,
+      };
+    }
+  }, [zoom]);
+
+  const handleTouchMove = useCallback((e) => {
+    const current = touchRef.current;
+    if (!current) return;
+
+    if (current.mode === "pinch" && e.touches.length === 2) {
+      e.preventDefault();
+      const nextDist = getTouchDistance(e.touches);
+      if (!nextDist) return;
+      const nextZoom = current.startZoom * (nextDist / current.startDist);
+      applyZoom(nextZoom);
+      return;
+    }
+
+    if (current.mode === "pan" && e.touches.length === 1) {
+      e.preventDefault();
+      const t0 = e.touches[0];
+      const nextPan = {
+        x: current.basePanX + (t0.clientX - current.startX),
+        y: current.basePanY + (t0.clientY - current.startY),
+      };
+      setPan(clampPan(nextPan, zoom));
+    }
+  }, [applyZoom, clampPan, zoom]);
+
+  const handleTouchEnd = useCallback((e) => {
+    const current = touchRef.current;
+    if (!current) return;
+
+    if (current.mode === "swipe" && e.changedTouches.length && zoom <= 1 && images.length > 1) {
+      const t0 = e.changedTouches[0];
+      const deltaX = t0.clientX - current.startX;
+      const deltaY = t0.clientY - current.startY;
+      if (Math.abs(deltaX) > SWIPE_THRESHOLD && Math.abs(deltaX) > Math.abs(deltaY) * 1.25) {
+        if (deltaX < 0) nextImage();
+        else prevImage();
+      }
+    }
+
+    if (e.touches.length === 0) {
+      touchRef.current = null;
+      return;
+    }
+
+    if (e.touches.length === 1) {
+      const t0 = e.touches[0];
+      if (zoom > 1) {
+        touchRef.current = {
+          mode: "pan",
+          startX: t0.clientX,
+          startY: t0.clientY,
+          basePanX: panRef.current.x,
+          basePanY: panRef.current.y,
+        };
+      } else {
+        touchRef.current = {
+          mode: "swipe",
+          startX: t0.clientX,
+          startY: t0.clientY,
+        };
+      }
+    }
+  }, [zoom, images.length, nextImage, prevImage]);
+
   const handleShare = async () => {
     const url = window.location.href;
     if (navigator.share) {
-      try { await navigator.share({ title: product?.name, url }); } catch {  }
+      try { await navigator.share({ title: product?.name, url }); } catch { /* ignore */ }
     } else {
-      try { await navigator.clipboard.writeText(url); toast(t("product.linkCopied"), "success"); } catch {  }
+      try { await navigator.clipboard.writeText(url); toast(t("product.linkCopied"), "success"); } catch { /* ignore */ }
     }
   };
+
+  const openViewer = useCallback(() => {
+    setIsViewerOpen(true);
+  }, []);
+
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
+
+  useEffect(() => {
+    setSelectedImage(0);
+    setSlideDir(1);
+    setIsViewerOpen(false);
+    resetViewerTransform();
+  }, [id, resetViewerTransform]);
+
+  useEffect(() => {
+    if (!images.length) return;
+    setSelectedImage((curr) => clamp(curr, 0, images.length - 1));
+  }, [images.length]);
+
+  useEffect(() => {
+    if (!isViewerOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeViewer();
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        prevImage();
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        nextImage();
+        return;
+      }
+      if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        applyZoom(zoom + ZOOM_STEP);
+        return;
+      }
+      if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        applyZoom(zoom - ZOOM_STEP);
+        return;
+      }
+      if (e.key === "0") {
+        e.preventDefault();
+        applyZoom(1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isViewerOpen, closeViewer, prevImage, nextImage, applyZoom, zoom]);
+
+  useEffect(() => {
+    if (!isViewerOpen || zoom <= 1) return undefined;
+    const onResize = () => {
+      setPan((curr) => clampPan(curr, zoom));
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [isViewerOpen, zoom, clampPan]);
+
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -196,7 +487,7 @@ const Product = () => {
   }, [id, checkFav]);
   const submitReview = async () => {
     if (!reviewText.trim()) { toast(t("product.writeReviewText"), "error"); return; }
-    const author = reviewAuthor.trim() || user?.username || t("product.anonymous");
+    const author = user?.username || t("product.anonymous");
     try {
       const review = await createProductReview(id, {
         author,
@@ -206,7 +497,6 @@ const Product = () => {
       setReviews((prev) => [review, ...prev]);
       setReviewText("");
       setReviewRating(5);
-      setReviewAuthor("");
       setShowReviewForm(false);
     } catch {
       toast("Failed to publish review", "error");
@@ -227,7 +517,7 @@ const Product = () => {
 
   const fmtDate = (iso) => {
     try { return new Date(iso).toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" }); }
-    catch { return "—"; }
+    catch { return "-"; }
   };
   if (loading) return (
     <div className={styles.productPage}>
@@ -251,7 +541,7 @@ const Product = () => {
   if (!product) return (
     <div className={styles.productPage}>
       <div className={styles.notFound}>
-        <div className={styles.notFoundIcon}>🔍</div>
+        <div className={styles.notFoundIcon}>404</div>
         <h2>{t("product.notFound")}</h2>
         <p>{t("product.notFoundDesc")}</p>
         <Link to="/catalog" className={styles.backBtn}>{t("product.backToCatalog")}</Link>
@@ -277,11 +567,23 @@ const Product = () => {
           <div
             className={styles.mainImage}
             ref={imgRef}
+            role="button"
+            tabIndex={0}
+            aria-label="Open product gallery"
+            onClick={openViewer}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openViewer();
+              }
+            }}
           >
             <img
+              key={`${product.id}-${selectedImage}`}
               src={images[selectedImage] || product.image}
               alt={tp.name}
-              className={imageTransition ? styles.imageFadeOut : styles.imageFadeIn}
+              className={`${styles.mainImagePreview} ${styles.imageFadeIn}`}
+              style={{ "--image-enter-x": `${-10 * slideDir}px` }}
               draggable={false}
               onError={(e) => {
                 const el = e.currentTarget;
@@ -290,13 +592,52 @@ const Product = () => {
                 el.src = getFallbackImage(product.id);
               }}
             />
-            <button className={`${styles.favBtn} ${isFav ? styles.favActive : ""}`} onClick={toggleFav}>
-              {isFav ? "♥" : "♡"}
+            <button
+              className={styles.viewerLaunchBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                openViewer();
+              }}
+              aria-label="Zoom image"
+              title="Zoom image"
+            >
+              <ZoomIcon />
+            </button>
+            <button
+              className={`${styles.favBtn} ${isFav ? styles.favActive : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFav();
+              }}
+              aria-label="Toggle favorite"
+              title="Toggle favorite"
+            >
+              <HeartIcon filled={isFav} />
             </button>
             {images.length > 1 && (
               <>
-                <button className={`${styles.galleryArrow} ${styles.galleryArrowLeft}`} onClick={prevImage}>‹</button>
-                <button className={`${styles.galleryArrow} ${styles.galleryArrowRight}`} onClick={nextImage}>›</button>
+                <button
+                  type="button"
+                  className={`${styles.galleryArrow} ${styles.galleryArrowLeft}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevImage();
+                  }}
+                  aria-label="Previous image"
+                >
+                  &lsaquo;
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.galleryArrow} ${styles.galleryArrowRight}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextImage();
+                  }}
+                  aria-label="Next image"
+                >
+                  &rsaquo;
+                </button>
                 <div className={styles.imageCounter}>{selectedImage + 1} / {images.length}</div>
               </>
             )}
@@ -304,19 +645,32 @@ const Product = () => {
           {images.length > 1 && (
             <div className={styles.thumbs}>
               {images.map((img, i) => (
-                <img
+                <button
                   key={i}
-                  src={img}
-                  alt=""
-                  className={`${styles.thumb} ${i === selectedImage ? styles.thumbActive : ""}`}
+                  type="button"
+                  className={`${styles.thumbBtn} ${i === selectedImage ? styles.thumbBtnActive : ""}`}
                   onClick={() => switchImage(i)}
-                />
+                  aria-label={`Image ${i + 1}`}
+                >
+                  <img
+                    src={img}
+                    alt=""
+                    className={`${styles.thumb} ${i === selectedImage ? styles.thumbActive : ""}`}
+                  />
+                </button>
               ))}
             </div>
           )}
         </div>
         <div className={styles.info}>
-          {product.brand && <span className={styles.brand}>{product.brand}</span>}
+          <div className={styles.infoTopRow}>
+            {product.brand && <span className={styles.brand}>{product.brand}</span>}
+            {/^[a-f0-9]{24}$/i.test(String(product?.id ?? "")) && !product.sold ? (
+              <span className={styles.usedBadge}>USED</span>
+            ) : !product.sold && isNumericId(product.id) ? (
+              <span className={styles.newBadge}>NEW</span>
+            ) : null}
+          </div>
           <h1 className={styles.title}>{tp.name}</h1>
 
           <div className={styles.ratingRow}>
@@ -366,7 +720,7 @@ const Product = () => {
                   className={styles.quantityBtn}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   disabled={quantity <= 1 || !isNumericId(product.id)}
-                >−</button>
+                >-</button>
                 <span className={styles.quantityValue}>{!isNumericId(product.id) ? 1 : quantity}</span>
                 <button
                   className={styles.quantityBtn}
@@ -390,7 +744,7 @@ const Product = () => {
                     toast(t("product.alreadyInCart"), "info");
                     return;
                   }
-                  try { if (token) { await apiAddToCart({ productId: product.id, name: product.name, price: product.price, image: product.image, quantity: qty }); } } catch {  }
+                  try { if (token) { await apiAddToCart({ productId: product.id, name: product.name, price: product.price, image: product.image, quantity: qty }); } } catch { /* ignore */ }
                   toast(`${tp.name} ${t("product.addedToCart")}`, "success");
                   setQuantity(1);
                 }}
@@ -398,7 +752,7 @@ const Product = () => {
                 {t("product.addToCart")}
               </button>
               <button className={`${styles.favBtnLarge} ${isFav ? styles.favActive : ""}`} onClick={toggleFav}>
-                {isFav ? "♥" : "♡"}
+                <HeartIcon filled={isFav} />
               </button>
               <button className={styles.shareBtn} onClick={handleShare} title={t("product.share")}>
                 {t("product.share")}
@@ -420,6 +774,126 @@ const Product = () => {
           </div>
         </div>
       </div>
+      {isViewerOpen && (
+        <div
+          className={styles.viewerOverlay}
+          onClick={closeViewer}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Product image viewer"
+        >
+          <div className={styles.viewerContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.viewerToolbar}>
+              <div className={styles.viewerZoomControls}>
+                <button
+                  type="button"
+                  className={styles.viewerToolbarBtn}
+                  onClick={() => applyZoom(zoom - ZOOM_STEP)}
+                  disabled={zoom <= ZOOM_MIN}
+                  aria-label="Zoom out"
+                >
+                  -
+                </button>
+                <span className={styles.viewerZoomLabel}>{Math.round(zoom * 100)}%</span>
+                <button
+                  type="button"
+                  className={styles.viewerToolbarBtn}
+                  onClick={() => applyZoom(zoom + ZOOM_STEP)}
+                  disabled={zoom >= ZOOM_MAX}
+                  aria-label="Zoom in"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className={styles.viewerToolbarBtn}
+                  onClick={() => applyZoom(1)}
+                  disabled={zoom <= 1}
+                  aria-label="Reset zoom"
+                >
+                  100%
+                </button>
+              </div>
+              <button
+                type="button"
+                className={styles.viewerCloseBtn}
+                onClick={closeViewer}
+                aria-label="Close viewer"
+              >
+                Close
+              </button>
+            </div>
+
+            <div
+              className={`${styles.viewerStage} ${zoom > 1 ? styles.viewerStageZoomed : ""}`}
+              ref={viewerStageRef}
+              onDoubleClick={handleViewerDoubleClick}
+              onWheel={handleViewerWheel}
+              onMouseDown={startPanning}
+              onMouseMove={onPanMove}
+              onMouseUp={stopPanning}
+              onMouseLeave={stopPanning}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
+            >
+              <img
+                src={images[selectedImage] || product.image}
+                alt={tp.name}
+                className={styles.viewerImage}
+                style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})` }}
+                draggable={false}
+                onError={(e) => {
+                  const el = e.currentTarget;
+                  if (el.dataset.fallbackApplied) return;
+                  el.dataset.fallbackApplied = "1";
+                  el.src = getFallbackImage(product.id);
+                }}
+              />
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    className={`${styles.viewerArrow} ${styles.viewerArrowLeft}`}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={prevImage}
+                    aria-label="Previous image"
+                  >
+                    &lsaquo;
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.viewerArrow} ${styles.viewerArrowRight}`}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={nextImage}
+                    aria-label="Next image"
+                  >
+                    &rsaquo;
+                  </button>
+                  <div className={styles.viewerCounter}>{selectedImage + 1} / {images.length}</div>
+                </>
+              )}
+            </div>
+
+            {images.length > 1 && (
+              <div className={styles.viewerThumbs}>
+                {images.map((img, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`${styles.viewerThumbBtn} ${i === selectedImage ? styles.viewerThumbBtnActive : ""}`}
+                    onClick={() => switchImage(i)}
+                    aria-label={`Image ${i + 1}`}
+                  >
+                    <img src={img} alt="" className={styles.viewerThumbImg} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <div className={styles.tabsSection}>
         <div className={styles.tabsHeader}>
           <button
@@ -494,7 +968,7 @@ const Product = () => {
                     const pct = reviews.length ? Math.round((count / reviews.length) * 100) : 0;
                     return (
                       <div key={star} className={styles.barRow}>
-                        <span className={styles.barLabel}>{star} ★</span>
+                        <span className={styles.barLabel}>{star}/5</span>
                         <div className={styles.barTrack}><div className={styles.barFill} style={{ width: `${pct}%` }} /></div>
                         <span className={styles.barCount}>{count}</span>
                       </div>
@@ -505,16 +979,6 @@ const Product = () => {
             )}
             {showReviewForm && (
               <div className={styles.reviewForm}>
-                <div className={styles.formRow}>
-                  <label>{t("product.yourName")}</label>
-                  <input
-                    type="text"
-                    placeholder={t("product.namePlaceholder")}
-                    value={reviewAuthor}
-                    onChange={(e) => setReviewAuthor(e.target.value)}
-                    className={styles.reviewInput}
-                  />
-                </div>
                 <div className={styles.formRow}>
                   <label>{t("product.rating")}</label>
                   <StarRating rating={reviewRating} onRate={setReviewRating} interactive size={28} />
@@ -549,7 +1013,7 @@ const Product = () => {
                         <span className={styles.reviewDate}>{fmtDate(r.date)}</span>
                       </div>
                       <StarRating rating={r.rating} size={14} />
-                      <button className={styles.reviewDelete} onClick={() => deleteReview(r.id)} title={t("product.deleteReview")}>✕</button>
+                      <button className={styles.reviewDelete} onClick={() => deleteReview(r.id)} title={t("product.deleteReview")}>x</button>
                     </div>
                     <p className={styles.reviewText}>{r.text}</p>
                   </div>
@@ -564,3 +1028,4 @@ const Product = () => {
 };
 
 export default Product;
+

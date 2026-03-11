@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "./Sell.module.css";
 import { createListedProduct } from "../../api/users.api";
 import { useAuth } from "../../store";
@@ -6,28 +7,32 @@ import { useTranslation } from "../../i18n";
 
 const categories = ["Телефоны", "Ноутбуки", "Одежда", "Обувь", "Часы", "Сумки", "Аксессуары", "Электроника", "Дом и сад"];
 
-const generateRouteId = () => {
-  try {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-      return crypto.randomUUID();
-    }
-  } catch {
+const LISTED_PRODUCTS_KEY = "listedProducts";
 
+const readListedProducts = () => {
+  try {
+    const raw = localStorage.getItem(LISTED_PRODUCTS_KEY) || "[]";
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const saveListedProducts = (items) => {
+  localStorage.setItem(LISTED_PRODUCTS_KEY, JSON.stringify(items));
 };
 
 const Sell = () => {
-  const { token } = useAuth();
+  const navigate = useNavigate();
+  const { token, user } = useAuth();
   const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("Телефоны");
   const [description, setDescription] = useState("");
-  const [image, setImage] = useState("");
-  const [imageFile, setImageFile] = useState(null);
   const [images, setImages] = useState([]);
-  const [imageFiles, setImageFiles] = useState([]);
+  const [, setImageFiles] = useState([]);
   const [msg, setMsg] = useState("");
   const [msgType, setMsgType] = useState("");
   const fileInputRef = React.useRef(null);
@@ -59,6 +64,9 @@ const Sell = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMsg("");
+    setMsgType("");
+
     if (!title.trim() || !price) {
       setMsgType("error");
       setMsg(t("sell.enterNameAndPrice"));
@@ -74,22 +82,50 @@ const Sell = () => {
       setMsg(t("sell.loginToPublish"));
       return;
     }
+
     try {
-      let product;
+      const payload = {
+        title: title.trim(),
+        price: +price,
+        category,
+        description: description.trim(),
+        images,
+      };
 
-      if (token) {
+      let product = null;
+      let apiError = null;
 
-        try {
-          product = await createListedProduct({
-            title,
-            price: +price,
-            category,
-            description,
-            images, 
-          });
-        } catch (err) {
-          console.error("API create failed", err);
-          throw err;
+      try {
+        product = await createListedProduct(payload);
+      } catch (err) {
+        apiError = err;
+        console.error("API create failed", err);
+      }
+
+      if (!product) {
+        const localProduct = {
+          id: `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+          name: payload.title,
+          title: payload.title,
+          price: payload.price,
+          category: payload.category,
+          description: payload.description,
+          image: payload.images[0] || "",
+          images: payload.images,
+          userId: user?.id || user?._id || "local-user",
+          username: user?.username || "User",
+          sold: false,
+          createdAt: new Date().toISOString(),
+        };
+
+        const listed = readListedProducts();
+        listed.unshift(localProduct);
+        saveListedProducts(listed);
+        product = localProduct;
+
+        if (apiError) {
+          const details = apiError?.response?.data?.error || apiError?.message || "API unavailable";
+          console.warn("Saved listing locally after API failure:", details);
         }
       }
 
@@ -101,17 +137,17 @@ const Sell = () => {
       setPrice(""); 
       setCategory("Телефоны"); 
       setDescription(""); 
-      setImage("");
-      setImageFile(null);
       setImages([]);
       setImageFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       window.dispatchEvent(new CustomEvent("myproducts:changed"));
-      setTimeout(() => setMsg(""), 3000);
+      navigate(`/catalog?category=${encodeURIComponent(payload.category)}`);
+      return;
     } catch (err) {
       console.error(err);
       setMsgType("error");
-      setMsg(t("sell.publishError"));
+      const details = err?.response?.data?.error || err?.message || "";
+      setMsg(details ? `${t("sell.publishError")} (${details})` : t("sell.publishError"));
     }
   };
 
