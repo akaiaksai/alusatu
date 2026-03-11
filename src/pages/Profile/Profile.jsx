@@ -30,6 +30,7 @@ const fmtDate = (iso) => {
 
 const ORDER_STATUSES = ["paid", "shipped", "delivered"];
 const DAY_MS = 24 * 60 * 60 * 1000;
+const REFUND_AFTER_DELIVERED_MS = 14 * DAY_MS;
 
 const parseDateSafe = (value) => {
   if (!value) return null;
@@ -87,6 +88,17 @@ const getTimedStatus = (order, nowMs) => {
   }
 
   return derived;
+};
+
+const canRefundOrder = (order, status, nowMs) => {
+  if (!order || status === "cancelled") return false;
+  if (status === "paid" || status === "shipped") return true;
+  if (status !== "delivered") return false;
+
+  const now = Number(nowMs || Date.now());
+  const deliveredAt = parseDateSafe(order?.deliveredAt) || getOrderDeliveryDate(order);
+  if (!deliveredAt) return false;
+  return now <= (deliveredAt.getTime() + REFUND_AFTER_DELIVERED_MS);
 };
 
 const formatCountdown = (ms) => {
@@ -190,6 +202,7 @@ const Profile = () => {
           paidAt: o.paidAt || o.createdAt || "",
           shippedAt: o.shippedAt || "",
           deliveryDate: o.deliveryDate || "",
+          deliveredAt: o.deliveredAt || "",
           pickupDate: o.pickupDate || '',
           deliveryMethod: o.deliveryMethod || 'pickup',
           deliveryAddress: o.deliveryAddress || '',
@@ -603,6 +616,7 @@ const Profile = () => {
             <div className={styles.ordersList}>
               {userOrders.slice().reverse().map((o) => {
                 const effectiveStatus = getTimedStatus(o, nowTs);
+                const canRefund = canRefundOrder(o, effectiveStatus, nowTs);
                 const statusIdx = effectiveStatus === "cancelled" ? -1 : ORDER_STATUSES.indexOf(effectiveStatus);
                 const countdown = getStatusCountdown(o, effectiveStatus);
                 const receiptView = normalizeOrderReceipt(o);
@@ -677,7 +691,7 @@ const Profile = () => {
                     <button className={styles.receiptBtn} onClick={() => handleToggleReceipt(o)} disabled={isReceiptLoading}>
                       {isReceiptLoading ? "..." : isReceiptOpen ? receiptHideLabel : receiptShowLabel}
                     </button>
-                    {effectiveStatus !== "cancelled" && (
+                    {effectiveStatus !== "cancelled" && canRefund && (
                       <button className={styles.refundBtn} onClick={() => handleRefund(o.id)}>{t("profile.refund")}</button>
                     )}
                     {effectiveStatus === "cancelled" && <span className={styles.orderCancelled}>{t("profile.refunded")}</span>}

@@ -6,6 +6,7 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cache');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const REFUND_AFTER_DELIVERY_WINDOW_MS = 14 * DAY_MS;
 
 function toValidDate(value) {
   if (!value) return null;
@@ -94,7 +95,7 @@ async function applyTimedStatus(orderDoc, now = new Date()) {
   }
 
   if (timedStatus === 'delivered' && !orderDoc.deliveredAt) {
-    orderDoc.deliveredAt = now;
+    orderDoc.deliveredAt = toValidDate(orderDoc.deliveryDate) || now;
   }
 
   await orderDoc.save();
@@ -157,8 +158,31 @@ router.post('/:id/refund', requireAuth, invalidateCache('/api/orders', '/api/pro
       return res.status(403).json({ error: 'No access to refund this order' });
     }
 
+    const now = new Date();
+    await applyTimedStatus(order, now);
+
     if (order.status === 'cancelled') {
       return res.status(400).json({ error: 'Order already refunded/cancelled' });
+    }
+
+    if (order.status === 'delivered') {
+      const deliveredAt = toValidDate(order.deliveredAt) || toValidDate(order.deliveryDate);
+      const refundDeadline = deliveredAt
+        ? new Date(deliveredAt.getTime() + REFUND_AFTER_DELIVERY_WINDOW_MS)
+        : null;
+
+      if (refundDeadline && now.getTime() > refundDeadline.getTime()) {
+        return res.status(400).json({
+          error: 'После получения возврат доступен в течение 14 дней',
+          code: 'REFUND_WINDOW_EXPIRED',
+          refundDeadline: refundDeadline.toISOString(),
+        });
+      }
+    } else if (!['paid', 'shipped'].includes(order.status)) {
+      return res.status(400).json({
+        error: 'Возврат доступен только для оплаченных, отправленных или недавно полученных заказов',
+        code: 'REFUND_NOT_ALLOWED',
+      });
     }
 
     req.user.balance = (req.user.balance || 0) + Number(order.total || 0);

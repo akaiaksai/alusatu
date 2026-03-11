@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+const DELETED_EMAIL_DOMAIN = 'deleted.local';
+function isDeletedEmail(value) {
+  const email = String(value || '').toLowerCase().trim();
+  return email.endsWith(`@${DELETED_EMAIL_DOMAIN}`);
+}
+
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -47,6 +53,9 @@ userSchema.methods.comparePassword = function (raw) {
 
 userSchema.methods.toSafe = function () {
   const obj = this.toObject();
+  if (isDeletedEmail(obj.email)) {
+    obj.email = '';
+  }
   delete obj.password;
   delete obj.__v;
   return obj;
