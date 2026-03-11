@@ -1,6 +1,7 @@
 .header {
   --header-bg: rgba(12, 12, 14, 0.92);
-  --header-border: rgba(255, 255, 255, 0.08);
+  --header-border: rgba(255, 255, 255, 0.06);
+  --header-hover-border: rgba(255, 255, 255, 0.34);
   --header-text: #f6f7fb;
   --header-muted: rgba(246, 247, 251, 0.72);
   --header-pill: rgba(255, 255, 255, 0.04);
@@ -37,7 +38,8 @@
 
 [data-theme="light"] .header {
   --header-bg: rgba(255, 255, 255, 0.98);
-  --header-border: #e7e9ef;
+  --header-border: #e5e8ee;
+  --header-hover-border: #c9cfdb;
   --header-text: #111;
   --header-muted: #595f6d;
   --header-pill: #fff;
@@ -115,7 +117,7 @@
 }
 
 .searchInput:focus {
-  border-color: #fff;
+  border-color: var(--header-hover-border);
   box-shadow: var(--header-focus-ring), var(--header-soft-stroke);
 }
 
@@ -138,7 +140,7 @@
 
 .searchButton:hover {
   background: var(--header-pill-hover);
-  border-color: #fff;
+  border-color: var(--header-hover-border);
   transform: translateY(-1px);
   box-shadow: var(--header-soft-stroke), var(--header-pill-shadow);
 }
@@ -180,7 +182,7 @@
 
 .sellBtn:hover {
   background: var(--header-pill-hover);
-  border-color: #fff;
+  border-color: var(--header-hover-border);
   transform: translateY(-1px);
   box-shadow: var(--header-soft-stroke), var(--header-pill-shadow);
 }
@@ -203,7 +205,7 @@
 
 .iconBtn:hover {
   background: var(--header-pill-hover);
-  border-color: #fff;
+  border-color: var(--header-hover-border);
   transform: translateY(-1px);
   box-shadow: var(--header-soft-stroke), var(--header-pill-shadow);
 }
@@ -275,7 +277,7 @@
 
 .authBtn:hover {
   background: var(--header-pill);
-  border-color: #fff;
+  border-color: var(--header-hover-border);
   box-shadow: var(--header-soft-stroke), var(--header-pill-shadow);
 }
 
@@ -367,7 +369,7 @@
 
 .themeToggleBtn:hover {
   background: var(--header-pill);
-  border-color: #fff;
+  border-color: var(--header-hover-border);
   box-shadow: var(--header-soft-stroke), var(--header-pill-shadow);
 }
 
@@ -511,7 +513,7 @@
 }
 
 .headerAvatar:hover {
-  border-color: #fff;
+  border-color: var(--header-hover-border);
   transform: translateY(-1px);
   box-shadow: var(--header-soft-stroke), var(--header-pill-shadow);
 }
@@ -552,7 +554,7 @@
 
 .logoutBtn:hover {
   background: var(--header-pill);
-  border-color: #fff;
+  border-color: var(--header-hover-border);
   box-shadow: var(--header-soft-stroke), var(--header-pill-shadow);
 }
 
@@ -564,7 +566,7 @@
 .headerAvatar:focus-visible,
 .logoutBtn:focus-visible {
   outline: none;
-  border-color: #fff;
+  border-color: var(--header-hover-border);
   box-shadow: var(--header-focus-ring), var(--header-soft-stroke);
 }
 
