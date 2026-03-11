@@ -165,6 +165,8 @@ const Cart = () => {
         );
       } else if (err?.response?.data?.code === "PRODUCT_SOLD") {
         toast(err.response.data.error || t("cart.productAlreadySold"), "error");
+      } else if (err?.response?.data?.code === "OWN_PRODUCT_PURCHASE") {
+        toast(err.response.data.error || "Вы не можете купить собственное объявление", "error");
       } else {
         console.error("Order error:", err?.response?.data || err?.message || err);
         toast(t("cart.orderError"), "error");

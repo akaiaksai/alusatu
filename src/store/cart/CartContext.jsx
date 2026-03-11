@@ -30,7 +30,7 @@ const toClient = (serverItems) =>
 const isListedProductId = (id) => /^[a-f0-9]{24}$/i.test(String(id ?? ''));
 
 export const CartProvider = ({ children }) => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [cart, setCartState] = useState(readLocalCart);
   const [cartCount, setCartCount] = useState(() => calcCount(readLocalCart()));
   const tokenRef = useRef(token);
@@ -76,6 +76,12 @@ export const CartProvider = ({ children }) => {
   }, [token, persist]);
 
   const addToCart = useCallback((product, qty = 1) => {
+    const currentUserId = String(user?.id || user?._id || "");
+    const ownerUserId = String(product?.userId || "");
+    if (currentUserId && ownerUserId && currentUserId === ownerUserId) {
+      return "OWN_PRODUCT";
+    }
+
     const items = readLocalCart();
     const existing = items.find((i) => String(i.id) === String(product.id));
 
@@ -98,7 +104,7 @@ export const CartProvider = ({ children }) => {
         quantity: qty,
       }).catch(() => {});
     }
-  }, [persist]);
+  }, [persist, user?.id, user?._id]);
 
   const removeFromCart = useCallback((id) => {
     persist(readLocalCart().filter((i) => String(i.id) !== String(id)));

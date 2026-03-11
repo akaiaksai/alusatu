@@ -289,6 +289,13 @@
   border-color: #fff;
 }
 
+.overlayCart:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 [data-theme="dark"] .overlayFav {
   background: #fff;
   color: #111;
@@ -508,6 +515,7 @@
   }
 
   .cartBtn:hover { transform: translateY(-1px); background: #f2f2f2; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2); }
+  .cartBtn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; box-shadow: none; }
 
   .viewBtn {
     display: block;

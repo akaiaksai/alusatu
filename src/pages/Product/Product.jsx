@@ -131,6 +131,10 @@ const Product = () => {
   const { toggleFavorite, isFavorite } = useFavorites();
   const { t } = useTranslation();
   const tp = product ? translateProduct(product, t) : null;
+  const ownListingError = "Вы не можете купить собственное объявление";
+  const currentUserId = String(user?.id || user?._id || "");
+  const ownerUserId = String(product?.userId || "");
+  const isOwnListing = Boolean(currentUserId && ownerUserId && currentUserId === ownerUserId);
 
   const resetViewerTransform = useCallback(() => {
     setZoom((prev) => (prev === 1 ? prev : 1));
@@ -711,6 +715,8 @@ const Product = () => {
           <div className={styles.purchaseArea}>
             {product.sold ? (
               <div className={styles.soldBanner}>{t("product.soldOut")}</div>
+            ) : isOwnListing ? (
+              <div className={styles.soldBanner}>{ownListingError}</div>
             ) : (
               <>
             <div className={styles.quantityRow}>
@@ -738,8 +744,16 @@ const Product = () => {
                     toast(t("product.loginForCart"), "error");
                     return;
                   }
+                  if (isOwnListing) {
+                    toast(ownListingError, "error");
+                    return;
+                  }
                   const qty = !isNumericId(product.id) ? 1 : quantity;
                   const result = addToCart(product, qty);
+                  if (result === "OWN_PRODUCT") {
+                    toast(ownListingError, "error");
+                    return;
+                  }
                   if (result === "ALREADY_IN_CART") {
                     toast(t("product.alreadyInCart"), "info");
                     return;

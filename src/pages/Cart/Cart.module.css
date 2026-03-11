@@ -597,6 +597,17 @@
   background: #f2f2f2;
 }
 
+[data-theme="dark"] .printBtn,
+[data-theme="dark"] .closeReceiptBtn {
+  border-color: #111;
+  box-shadow: 0 0 0 1px rgba(17, 17, 17, 0.08);
+}
+
+[data-theme="dark"] .printBtn:hover,
+[data-theme="dark"] .closeReceiptBtn:hover {
+  border-color: #000;
+}
+
 [data-theme="light"] .printBtn,
 [data-theme="light"] .closeReceiptBtn {
   background: #111;

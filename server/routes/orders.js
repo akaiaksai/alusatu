@@ -198,8 +198,21 @@ router.post('/', requireAuth, invalidateCache('/api/orders', '/api/cart', '/api/
     if (listedProductIds.length > 0) {
       const listedProducts = await ListedProduct.find({ _id: { $in: listedProductIds } });
       const foundIds = new Set(listedProducts.map((product) => String(product._id)));
+      const ownProducts = listedProducts.filter(
+        (product) => String(product.userId) === String(user._id)
+      );
       const soldProducts = listedProducts.filter((product) => product.sold);
       const missingIds = listedProductIds.filter((id) => !foundIds.has(id));
+
+      if (ownProducts.length > 0) {
+        const ownNames = ownProducts.map((product) => product.title).join(', ');
+        return res.status(400).json({
+          error: ownNames
+            ? `You cannot buy your own listing(s): ${ownNames}`
+            : 'You cannot buy your own listing',
+          code: 'OWN_PRODUCT_PURCHASE',
+        });
+      }
 
       if (soldProducts.length > 0 || missingIds.length > 0) {
         const soldNames = soldProducts.map((product) => product.title).join(', ');

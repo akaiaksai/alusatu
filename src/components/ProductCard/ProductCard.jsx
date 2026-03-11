@@ -53,6 +53,10 @@ const ProductCard = ({ product }) => {
 
   const [imgSrc, setImgSrc] = useState(() => (isBannedImage ? "" : product.image));
   const [, setImgAttempt] = useState(0);
+  const ownListingError = "Вы не можете купить собственное объявление";
+  const currentUserId = String(user?.id || user?._id || "");
+  const ownerUserId = String(product?.userId || "");
+  const isOwnListing = Boolean(currentUserId && ownerUserId && currentUserId === ownerUserId);
 
   const handleToggleFavorite = () => {
     if (!user) {
@@ -73,11 +77,19 @@ const ProductCard = ({ product }) => {
       toast(t("productCard.loginForCart"), "error");
       return;
     }
+    if (isOwnListing) {
+      toast(ownListingError, "error");
+      return;
+    }
     if (product.sold) {
       toast(t("productCard.alreadySold"), "error");
       return;
     }
     const result = addToCart(product, 1);
+    if (result === "OWN_PRODUCT") {
+      toast(ownListingError, "error");
+      return;
+    }
     if (result === "ALREADY_IN_CART") {
       toast(t("productCard.alreadyInCart"), "info");
       return;
@@ -152,6 +164,7 @@ const ProductCard = ({ product }) => {
             className={styles.overlayCart}
             onClick={handleAddToCart}
             title={t("productCard.addToCart")}
+            disabled={product.sold || isOwnListing}
           >
             {t("productCard.addToCart")}
           </button>
@@ -186,6 +199,7 @@ const ProductCard = ({ product }) => {
           onClick={handleAddToCart}
           aria-label={t("productCard.addToCart")}
           title={t("productCard.addToCart")}
+          disabled={product.sold || isOwnListing}
         >
           {t("productCard.addToCart")}
         </button>
