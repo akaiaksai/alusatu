@@ -15,12 +15,26 @@ const app = express();
 
 // Trust first proxy (Nginx)
 app.set('trust proxy', 1);
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
-  : null;
+const defaultAllowedOrigins = [
+  'https://akaiaksai.app',
+  'https://www.akaiaksai.app',
+  'https://akaiaksai.github.io',
+  'http://localhost:5173',
+  'http://localhost:5174',
+];
+
+const envAllowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
+  : [];
+
+const allowedOrigins = [...new Set([...defaultAllowedOrigins, ...envAllowedOrigins])];
 
 app.use(cors({
-  origin: allowedOrigins || true,
+  origin(origin, callback) {
+    // Allow non-browser clients (curl/postman) and same-origin requests.
+    if (!origin) return callback(null, true);
+    return callback(null, allowedOrigins.includes(origin));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '50mb' }));

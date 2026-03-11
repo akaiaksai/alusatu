@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const runtimeFallbackApiUrl =
+  typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? 'https://backend.akaiaksai.app'
+    : 'http://localhost:4000';
+
+const API_URL = import.meta.env.VITE_API_URL || runtimeFallbackApiUrl;
 
 const api = axios.create({
   baseURL: API_URL,
