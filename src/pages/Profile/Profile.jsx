@@ -368,6 +368,11 @@ const Profile = () => {
   };
 
   const statusLabel = (status) => {
+    if (status === "cancelled") {
+      if (lang === "ru") return "Отменен";
+      if (lang === "kk") return "Бас тартылды";
+      return "Cancelled";
+    }
     if (status === "delivered") {
       if (lang === "ru") return "Получен";
       if (lang === "kk") return "Алынды";
@@ -597,7 +602,12 @@ const Profile = () => {
                 <div key={o.id} className={styles.orderCard}>
                   <div className={styles.orderHeader}>
                     <span className={styles.orderId}>{t("profile.orderNumber")} #{String(o.id).slice(-8)}</span>
-                    <span className={styles.orderDate}>{fmtDate(o.date)}</span>
+                    <div className={styles.orderHeaderRight}>
+                      <span className={`${styles.orderStatusBadge} ${styles[`orderStatus_${effectiveStatus}`] || ""}`}>
+                        {statusLabel(effectiveStatus)}
+                      </span>
+                      <span className={styles.orderDate}>{fmtDate(o.date)}</span>
+                    </div>
                   </div>
 
                   {effectiveStatus !== "cancelled" && (

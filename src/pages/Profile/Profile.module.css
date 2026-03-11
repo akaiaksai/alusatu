@@ -455,6 +455,42 @@
   color: #fff;
 }
 
+.orderHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.orderStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.orderStatus_paid {
+  background: rgba(95, 138, 255, 0.24);
+}
+
+.orderStatus_shipped {
+  background: rgba(255, 186, 84, 0.28);
+}
+
+.orderStatus_delivered {
+  background: rgba(76, 175, 80, 0.32);
+}
+
+.orderStatus_cancelled {
+  background: rgba(229, 57, 53, 0.28);
+}
+
 [data-theme="light"] .orderHeader {
   background: linear-gradient(135deg, #111 0%, #333 100%);
 }
@@ -849,6 +885,7 @@
   .tabs { border-radius: 8px; }
   .tab { padding: 8px 10px; font-size: 0.75rem; border-radius: 6px; }
   .orderHeader { flex-direction: column; gap: 4px; align-items: flex-start; }
+  .orderHeaderRight { width: 100%; justify-content: space-between; }
   .listingCard { flex-wrap: wrap; }
 }
 
