@@ -13,14 +13,11 @@ const productsRoutes = require('./routes/products');
 
 const app = express();
 
-// Trust first proxy (Nginx)
 app.set('trust proxy', 1);
 const defaultAllowedOrigins = [
   'https://akaiaksai.app',
   'https://www.akaiaksai.app',
   'https://akaiaksai.github.io',
-  'http://localhost:5173',
-  'http://localhost:5174',
 ];
 
 const envAllowedOrigins = process.env.ALLOWED_ORIGINS
@@ -31,7 +28,6 @@ const allowedOrigins = [...new Set([...defaultAllowedOrigins, ...envAllowedOrigi
 
 app.use(cors({
   origin(origin, callback) {
-    // Allow non-browser clients (curl/postman) and same-origin requests.
     if (!origin) return callback(null, true);
     return callback(null, allowedOrigins.includes(origin));
   },
@@ -43,11 +39,9 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 const PORT = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/alu-satu';
 
-// Basic rate limiting
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
 app.use(limiter);
 
-// ── API routes ──
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/cart', cartRoutes);
@@ -62,13 +56,11 @@ app.use((err, _req, res, next) => {
   return next(err);
 });
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', mongo: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
 });
 
-// ── Connect to MongoDB & start ──
-mongoose
+  mongoose
   .connect(MONGO_URI)
   .then(() => {
     console.log('✓ MongoDB connected:', MONGO_URI);
