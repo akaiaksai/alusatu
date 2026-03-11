@@ -89,7 +89,6 @@ const Catalog = () => {
   const handleCategoryChange = (cat) => { setSelectedCategory(cat); setPage(1); };
   const handlePriceChange = (e) => { setPriceLimit(Math.min(priceMax, Number(e.target.value) || 0)); setPage(1); };
   const handleSortChange = (e) => { setSortBy(e.target.value); setPage(1); };
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setPage(1); }, [search]);
 
   return (

@@ -47,7 +47,6 @@ function normalizeImages({ image, images }) {
   return out;
 }
 
-// GET /api/products/listed - all user-listed products (exclude sold)
 router.get('/listed', cacheMiddleware(60), async (_req, res) => {
   try {
     const products = await ListedProduct.find({ sold: { $ne: true } }).sort({ createdAt: -1 });
@@ -57,7 +56,6 @@ router.get('/listed', cacheMiddleware(60), async (_req, res) => {
   }
 });
 
-// GET /api/products/listed/:id - one user-listed product
 router.get('/listed/:id', cacheMiddleware(60), async (req, res) => {
   try {
     const product = await ListedProduct.findById(req.params.id);
@@ -70,7 +68,6 @@ router.get('/listed/:id', cacheMiddleware(60), async (req, res) => {
   }
 });
 
-// GET /api/products/my - current user's listings
 router.get('/my', requireAuth, cacheMiddleware(30), async (req, res) => {
   try {
     const products = await ListedProduct.find({ userId: req.user._id }).sort({ createdAt: -1 });
@@ -80,7 +77,6 @@ router.get('/my', requireAuth, cacheMiddleware(30), async (req, res) => {
   }
 });
 
-// POST /api/products - create listed product
 router.post('/', requireAuth, invalidateCache('/api/products'), async (req, res) => {
   try {
     const { title, price, category, description, image, images } = req.body || {};
@@ -105,7 +101,6 @@ router.post('/', requireAuth, invalidateCache('/api/products'), async (req, res)
   }
 });
 
-// GET /api/products/:productId/reviews - public reviews for any product
 router.get('/:productId/reviews', async (req, res) => {
   try {
     const productId = String(req.params.productId || '').trim();
@@ -120,7 +115,6 @@ router.get('/:productId/reviews', async (req, res) => {
   }
 });
 
-// POST /api/products/:productId/reviews - create review (public)
 router.post('/:productId/reviews', async (req, res) => {
   try {
     const productId = String(req.params.productId || '').trim();
@@ -152,7 +146,6 @@ router.post('/:productId/reviews', async (req, res) => {
   }
 });
 
-// DELETE /api/products/:productId/reviews/:reviewId - delete review
 router.delete('/:productId/reviews/:reviewId', async (req, res) => {
   try {
     const productId = String(req.params.productId || '').trim();
@@ -172,7 +165,6 @@ router.delete('/:productId/reviews/:reviewId', async (req, res) => {
   }
 });
 
-// DELETE /api/products/:id - delete listed product (owner or admin)
 router.delete('/:id', requireAuth, invalidateCache('/api/products'), async (req, res) => {
   try {
     const product = await ListedProduct.findById(req.params.id);

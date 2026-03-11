@@ -79,7 +79,6 @@ export const CartProvider = ({ children }) => {
     const items = readLocalCart();
     const existing = items.find((i) => String(i.id) === String(product.id));
 
-    // Listed products (user-posted) can only be added once with qty=1
     if (isListedProductId(product.id)) {
       if (existing) return "ALREADY_IN_CART";
       items.push({ ...product, quantity: 1 });
@@ -112,7 +111,6 @@ export const CartProvider = ({ children }) => {
       if (tokenRef.current) apiRemoveFromCart(id).catch(() => {});
       return;
     }
-    // Listed products cannot have qty > 1
     const finalQty = isListedProductId(id) ? 1 : qty;
     persist(readLocalCart().map((i) => String(i.id) === String(id) ? { ...i, quantity: finalQty } : i));
     if (tokenRef.current) apiUpdateCartItem(id, finalQty).catch(() => {});
@@ -161,7 +159,6 @@ export const CartProvider = ({ children }) => {
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error("useCart must be used within CartProvider");

@@ -3,7 +3,6 @@ const User = require('../models/User');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cache');
 
-// PUT /api/users/balance — пополнение баланса
 router.put('/balance', requireAuth, invalidateCache('/api/users'), async (req, res) => {
   try {
     const { amount } = req.body;
@@ -18,12 +17,10 @@ router.put('/balance', requireAuth, invalidateCache('/api/users'), async (req, r
   }
 });
 
-// GET /api/users/profile — current user profile (cached 30s + ETag)
 router.get('/profile', requireAuth, cacheMiddleware(30), (req, res) => {
   res.json({ user: req.user.toSafe() });
 });
 
-// PUT /api/users/profile — update profile
 router.put('/profile', requireAuth, invalidateCache('/api/users'), async (req, res) => {
   try {
     const { username, email, phone, city } = req.body;
@@ -50,7 +47,6 @@ router.put('/profile', requireAuth, invalidateCache('/api/users'), async (req, r
   }
 });
 
-// GET /api/users — admin: list all users (cached 30s + ETag)
 router.get('/', requireAuth, requireAdmin, cacheMiddleware(30), async (req, res) => {
   try {
     const users = await User.find().sort({ createdAt: -1 });
@@ -60,7 +56,6 @@ router.get('/', requireAuth, requireAdmin, cacheMiddleware(30), async (req, res)
   }
 });
 
-// DELETE /api/users/:id — admin: delete user
 router.delete('/:id', requireAuth, requireAdmin, invalidateCache('/api/users'), async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);

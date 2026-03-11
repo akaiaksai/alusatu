@@ -7,7 +7,6 @@ const {
   requireAuth,
 } = require('../middleware/auth');
 
-// POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -42,7 +41,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
     const { credential, password } = req.body;
@@ -74,13 +72,11 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// POST /api/auth/logout
 router.post('/logout', (_req, res) => {
   clearAuthCookie(res);
   res.json({ success: true });
 });
 
-// GET /api/auth/me - get current user by token or auth cookie
 router.get('/me', requireAuth, async (req, res) => {
   res.json({ user: req.user.toSafe() });
 });

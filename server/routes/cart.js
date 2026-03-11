@@ -3,12 +3,10 @@ const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cache');
 
-// GET /api/cart — get user cart (cached 15s + ETag)
 router.get('/', requireAuth, cacheMiddleware(15), (req, res) => {
   res.json(req.user.cart || []);
 });
 
-// POST /api/cart — add item to cart (or increase qty)
 router.post('/', requireAuth, invalidateCache('/api/cart'), async (req, res) => {
   try {
     const { productId, name, price, image, quantity } = req.body;
@@ -28,7 +26,6 @@ router.post('/', requireAuth, invalidateCache('/api/cart'), async (req, res) => 
   }
 });
 
-// PUT /api/cart/:productId — update quantity
 router.put('/:productId', requireAuth, invalidateCache('/api/cart'), async (req, res) => {
   try {
     const pid = Number(req.params.productId) || req.params.productId;
@@ -48,7 +45,6 @@ router.put('/:productId', requireAuth, invalidateCache('/api/cart'), async (req,
   }
 });
 
-// DELETE /api/cart/:productId — remove item from cart
 router.delete('/:productId', requireAuth, invalidateCache('/api/cart'), async (req, res) => {
   try {
     const pid = Number(req.params.productId) || req.params.productId;
@@ -61,7 +57,6 @@ router.delete('/:productId', requireAuth, invalidateCache('/api/cart'), async (r
   }
 });
 
-// DELETE /api/cart — clear entire cart
 router.delete('/', requireAuth, invalidateCache('/api/cart'), async (req, res) => {
   try {
     const user = req.user;

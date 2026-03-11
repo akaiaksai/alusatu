@@ -3,12 +3,10 @@ const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cache');
 
-// GET /api/favorites — get user favorites (cached 15s + ETag)
 router.get('/', requireAuth, cacheMiddleware(15), (req, res) => {
   res.json(req.user.favorites || []);
 });
 
-// POST /api/favorites — add product id to favorites
 router.post('/', requireAuth, invalidateCache('/api/favorites'), async (req, res) => {
   try {
     const { productId } = req.body;
@@ -23,7 +21,6 @@ router.post('/', requireAuth, invalidateCache('/api/favorites'), async (req, res
   }
 });
 
-// DELETE /api/favorites/:productId — remove from favorites
 router.delete('/:productId', requireAuth, invalidateCache('/api/favorites'), async (req, res) => {
   try {
     const pid = Number(req.params.productId);

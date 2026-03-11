@@ -56,7 +56,6 @@ export const I18nProvider = ({ children }) => {
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useTranslation = () => {
   const ctx = useContext(I18nContext);
   if (!ctx) throw new Error("useTranslation must be inside I18nProvider");

@@ -2,7 +2,6 @@ import React, { createContext, useCallback, useContext, useRef, useState } from 
 import styles from "./Toast.module.css";
 const ToastCtx = createContext(() => {});
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useToast = () => useContext(ToastCtx);
 const ICONS = { success: "✓", error: "✕", info: "ℹ" };
 const ToastItem = ({ toast, onRemove }) => {

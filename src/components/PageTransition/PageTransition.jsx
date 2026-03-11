@@ -22,7 +22,7 @@ const PageTransition = ({ children }) => {
 
     if (timer.current) clearTimeout(timer.current);
 
-    setPhase("exit"); // eslint-disable-line react-hooks/set-state-in-effect
+    setPhase("exit");
 
     timer.current = setTimeout(() => {
       prevKey.current = location.key;

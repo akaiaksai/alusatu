@@ -67,7 +67,6 @@ export const FavoritesProvider = ({ children }) => {
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useFavorites = () => {
   const ctx = useContext(FavoritesContext);
   if (!ctx) throw new Error("useFavorites must be used within FavoritesProvider");
