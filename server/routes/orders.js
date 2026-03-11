@@ -6,13 +6,12 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cache');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const STATUS_WEIGHT = {
-  pending: 0,
-  paid: 1,
-  shipped: 2,
-  delivered: 3,
-  cancelled: 99,
-};
+
+function toValidDate(value) {
+  if (!value) return null;
+  const dt = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
 
 function parsePickupDateToUtcDate(value) {
   const raw = String(value || '').trim();
@@ -30,25 +29,26 @@ function computeDeliveryDate({ pickupDate, createdAt, deliveryMethod }) {
   const fromPickupDate = parsePickupDateToUtcDate(pickupDate);
   if (fromPickupDate) return fromPickupDate;
 
-  const created = createdAt instanceof Date ? createdAt : new Date(createdAt || Date.now());
+  const created = toValidDate(createdAt) || new Date();
   const fallbackDays = deliveryMethod === 'courier' ? 3 : 2;
   return new Date(created.getTime() + fallbackDays * DAY_MS);
 }
 
 function computeShippedAt({ createdAt, deliveryDate }) {
-  const created = createdAt instanceof Date ? createdAt : new Date(createdAt || Date.now());
-  const quickFallback = new Date(created.getTime() + 12 * 60 * 60 * 1000);
+  const created = toValidDate(createdAt) || new Date();
+  const delivery = toValidDate(deliveryDate);
 
-  if (!(deliveryDate instanceof Date) || Number.isNaN(deliveryDate.getTime())) {
-    return quickFallback;
+  if (!delivery) {
+    return new Date(created.getTime() + 12 * 60 * 60 * 1000);
   }
 
-  const oneDayBeforeDelivery = new Date(deliveryDate.getTime() - DAY_MS);
-  if (oneDayBeforeDelivery.getTime() <= created.getTime()) {
-    return quickFallback;
+  const diffMs = delivery.getTime() - created.getTime();
+  if (diffMs <= 0) {
+    return new Date(created.getTime() + 6 * 60 * 60 * 1000);
   }
 
-  return oneDayBeforeDelivery;
+  const midPoint = created.getTime() + Math.floor(diffMs / 2);
+  return new Date(midPoint);
 }
 
 function generateReceiptNumber() {
@@ -61,19 +61,17 @@ function generateReceiptNumber() {
 function timedStatusForOrder(orderLike, now = new Date()) {
   if (!orderLike || orderLike.status === 'cancelled') return 'cancelled';
 
-  const deliveryDate = orderLike.deliveryDate instanceof Date
-    ? orderLike.deliveryDate
-    : new Date(orderLike.deliveryDate || 0);
+  const createdAt = toValidDate(orderLike.paidAt) || toValidDate(orderLike.createdAt) || new Date();
+  const deliveryDate = toValidDate(orderLike.deliveryDate)
+    || computeDeliveryDate({ pickupDate: orderLike.pickupDate, createdAt, deliveryMethod: orderLike.deliveryMethod });
+  const shippedAt = toValidDate(orderLike.shippedAt)
+    || computeShippedAt({ createdAt, deliveryDate });
 
-  const shippedAt = orderLike.shippedAt instanceof Date
-    ? orderLike.shippedAt
-    : new Date(orderLike.shippedAt || 0);
-
-  if (!Number.isNaN(deliveryDate.getTime()) && now.getTime() >= deliveryDate.getTime()) {
+  if (deliveryDate && now.getTime() >= deliveryDate.getTime()) {
     return 'delivered';
   }
 
-  if (!Number.isNaN(shippedAt.getTime()) && now.getTime() >= shippedAt.getTime()) {
+  if (shippedAt && now.getTime() >= shippedAt.getTime()) {
     return 'shipped';
   }
 
@@ -84,15 +82,15 @@ async function applyTimedStatus(orderDoc, now = new Date()) {
   if (!orderDoc || orderDoc.status === 'cancelled') return orderDoc;
 
   const timedStatus = timedStatusForOrder(orderDoc, now);
-  const currentWeight = STATUS_WEIGHT[orderDoc.status] ?? 0;
-  const timedWeight = STATUS_WEIGHT[timedStatus] ?? 0;
-
-  if (timedWeight <= currentWeight) return orderDoc;
+  if (orderDoc.status === timedStatus) return orderDoc;
 
   orderDoc.status = timedStatus;
 
-  if (timedStatus === 'shipped' && !orderDoc.shippedAt) {
-    orderDoc.shippedAt = now;
+  if (!orderDoc.shippedAt) {
+    orderDoc.shippedAt = computeShippedAt({
+      createdAt: orderDoc.paidAt || orderDoc.createdAt,
+      deliveryDate: orderDoc.deliveryDate,
+    });
   }
 
   if (timedStatus === 'delivered' && !orderDoc.deliveredAt) {

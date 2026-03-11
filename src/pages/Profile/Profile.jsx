@@ -29,11 +29,11 @@ const fmtDate = (iso) => {
 };
 
 const ORDER_STATUSES = ["paid", "shipped", "delivered"];
-const STATUS_WEIGHT = { pending: 0, paid: 1, shipped: 2, delivered: 3, cancelled: 99 };
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const parseDateSafe = (value) => {
-  const dt = new Date(value || 0);
+  if (!value) return null;
+  const dt = value instanceof Date ? value : new Date(value);
   return Number.isNaN(dt.getTime()) ? null : dt;
 };
 
@@ -57,14 +57,26 @@ const getOrderDeliveryDate = (order) => {
   return new Date(fromCreated.getTime() + 2 * DAY_MS);
 };
 
+const getOrderShippedDate = (order) => {
+  const explicitShippedAt = parseDateSafe(order?.shippedAt);
+  if (explicitShippedAt) return explicitShippedAt;
+
+  const createdAt = parseDateSafe(order?.paidAt) || parseDateSafe(order?.date);
+  const deliveryDate = getOrderDeliveryDate(order);
+  if (!createdAt || !deliveryDate) return null;
+
+  const diffMs = deliveryDate.getTime() - createdAt.getTime();
+  if (diffMs <= 0) return new Date(createdAt.getTime() + 6 * 60 * 60 * 1000);
+  return new Date(createdAt.getTime() + Math.floor(diffMs / 2));
+};
+
 const getTimedStatus = (order, nowMs) => {
   if (!order) return "paid";
   if (order.status === "cancelled") return "cancelled";
 
-  const currentStatus = order.status || "paid";
   const now = Number(nowMs || Date.now());
   const deliveryDate = getOrderDeliveryDate(order);
-  const shippedAt = parseDateSafe(order?.shippedAt);
+  const shippedAt = getOrderShippedDate(order);
 
   let derived = "paid";
 
@@ -72,11 +84,9 @@ const getTimedStatus = (order, nowMs) => {
     derived = "delivered";
   } else if (shippedAt && now >= shippedAt.getTime()) {
     derived = "shipped";
-  } else if (!shippedAt && deliveryDate && now >= (deliveryDate.getTime() - DAY_MS)) {
-    derived = "shipped";
   }
 
-  return (STATUS_WEIGHT[derived] ?? 0) > (STATUS_WEIGHT[currentStatus] ?? 0) ? derived : currentStatus;
+  return derived;
 };
 
 const formatCountdown = (ms) => {
@@ -393,7 +403,8 @@ const Profile = () => {
     if (!deliveryDate) return null;
 
     if (effectiveStatus === "paid") {
-      const shippedAt = parseDateSafe(order?.shippedAt) || new Date(deliveryDate.getTime() - DAY_MS);
+      const shippedAt = getOrderShippedDate(order);
+      if (!shippedAt) return null;
       const msLeft = shippedAt.getTime() - now;
       if (msLeft <= 0) return null;
       return {
