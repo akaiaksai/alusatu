@@ -1,6 +1,9 @@
 import React, { useRef, useState } from "react";
 import styles from "./AvatarPicker.module.css";
 import { useTranslation } from "../../i18n";
+
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+const TARGET_DATA_URL_LENGTH = 900 * 1024;
 const AVATAR_COLORS = [
   { bg: "#000000", fg: "#ffffff" },
   { bg: "#1a1a2e", fg: "#e94560" },
@@ -78,6 +81,64 @@ const generateAvatars = (initials) => {
   });
   return list;
 };
+
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result || ""));
+  reader.onerror = () => reject(new Error("Failed to read file"));
+  reader.readAsDataURL(file);
+});
+
+const loadImageFromDataUrl = (dataUrl) => new Promise((resolve, reject) => {
+  const img = new Image();
+  img.onload = () => resolve(img);
+  img.onerror = () => reject(new Error("Failed to load image"));
+  img.src = dataUrl;
+});
+
+async function compressAvatar(file) {
+  const src = await readFileAsDataUrl(file);
+  const image = await loadImageFromDataUrl(src);
+
+  const originalWidth = image.naturalWidth || image.width || 1;
+  const originalHeight = image.naturalHeight || image.height || 1;
+  const maxSides = [384, 320, 256, 224, 192, 160];
+  const formats = ["image/webp", "image/jpeg"];
+  const qualities = [0.85, 0.75, 0.65, 0.55, 0.45];
+  let best = src;
+
+  for (const maxSide of maxSides) {
+    const scale = Math.min(1, maxSide / Math.max(originalWidth, originalHeight));
+    const width = Math.max(1, Math.round(originalWidth * scale));
+    const height = Math.max(1, Math.round(originalHeight * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas is unavailable");
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+
+    for (const format of formats) {
+      for (const quality of qualities) {
+        const candidate = canvas.toDataURL(format, quality);
+        if (candidate.length <= TARGET_DATA_URL_LENGTH) {
+          return candidate;
+        }
+        if (candidate.length < best.length) {
+          best = candidate;
+        }
+      }
+    }
+  }
+
+  return best;
+}
+
 const AvatarPicker = ({ currentAvatar, initials = "?", onSelect, onClose }) => {
   const avatars = generateAvatars(initials);
   const [selected, setSelected] = useState(currentAvatar || null);
@@ -89,20 +150,24 @@ const AvatarPicker = ({ currentAvatar, initials = "?", onSelect, onClose }) => {
     onClose();
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return;
-    if (file.size > 2 * 1024 * 1024) {
+
+    if (file.size > MAX_UPLOAD_BYTES) {
       alert(t("avatarPicker.maxSize"));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      setSelected(dataUrl);
-    };
-    reader.readAsDataURL(file);
+
+    try {
+      const compressedDataUrl = await compressAvatar(file);
+      setSelected(compressedDataUrl);
+    } catch {
+      alert(t("avatarPicker.processingError"));
+    } finally {
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   return (

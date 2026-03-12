@@ -43,8 +43,8 @@ const kk = {
     fillAllFields: "Барлық өрістерді толтырыңыз",
     passwordsMismatch: "Құпия сөздер сәйкес емес",
     passwordMinLength: "Құпия сөз кемінде 6 таңбадан тұруы керек",
-    loginError: "Кіру қатесі. Backend пен MongoDB тексеріңіз",
-    registerError: "Тіркелу қатесі. Backend пен MongoDB тексеріңіз",
+    loginError: "Кіру мүмкін болмады. Қайта көріңіз.",
+    registerError: "Тіркелу мүмкін болмады. Қайта көріңіз.",
   },
 
   home: {
@@ -396,8 +396,9 @@ const kk = {
   avatarPicker: {
     title: "Аватар таңдаңыз",
     uploadPhoto: "Өз фотосуретіңізді жүктеңіз",
-    uploadHint: "JPG, PNG 2 МБ дейін",
-    maxSize: "Файлдың максималды көлемі — 2 МБ",
+    uploadHint: "JPG, PNG 8 МБ дейін (авто-сығылады)",
+    maxSize: "Файлдың максималды көлемі — 8 МБ",
+    processingError: "Суретті өңдеу сәтсіз аяқталды",
     currentSelection: "Ағымдағы таңдау",
     withInitials: "Инициалдармен",
     patterns: "Өрнектер",

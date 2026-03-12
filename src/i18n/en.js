@@ -43,8 +43,8 @@ const en = {
     fillAllFields: "Fill in all fields",
     passwordsMismatch: "Passwords do not match",
     passwordMinLength: "Password must be at least 6 characters",
-    loginError: "Login error. Check backend and MongoDB",
-    registerError: "Registration error. Check backend and MongoDB",
+    loginError: "Unable to sign in. Please try again.",
+    registerError: "Unable to register. Please try again.",
   },
 
   home: {
@@ -396,8 +396,9 @@ const en = {
   avatarPicker: {
     title: "Choose an avatar",
     uploadPhoto: "Upload your photo",
-    uploadHint: "JPG, PNG up to 2 MB",
-    maxSize: "Maximum file size is 2 MB",
+    uploadHint: "JPG, PNG up to 8 MB (auto-compressed)",
+    maxSize: "Maximum file size is 8 MB",
+    processingError: "Failed to process image",
     currentSelection: "Current selection",
     withInitials: "With initials",
     patterns: "Patterns",

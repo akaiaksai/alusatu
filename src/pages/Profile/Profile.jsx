@@ -142,8 +142,18 @@ const Profile = () => {
     try {
       await setAvatar(src);
       toast(t("profile.avatarUpdated"), "success");
-    } catch {
-      toast("Аватар не сохранился на сервере. Нужно обновить backend.", "error");
+    } catch (err) {
+      const status = err?.response?.status;
+      const serverMsg = err?.response?.data?.error;
+      if (status === 413) {
+        toast("Аватар слишком большой. Выберите фото поменьше.", "error");
+        return;
+      }
+      if (err?.code === "AUTH_REQUIRED") {
+        toast("Сессия истекла. Войдите в аккаунт снова.", "error");
+        return;
+      }
+      toast(serverMsg || "Не удалось сохранить аватар. Попробуйте ещё раз.", "error");
     }
   };
   const [favoriteProducts, setFavoriteProducts] = useState([]);

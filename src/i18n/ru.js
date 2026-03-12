@@ -43,8 +43,8 @@ const ru = {
     fillAllFields: "Заполните все поля",
     passwordsMismatch: "Пароли не совпадают",
     passwordMinLength: "Пароль должен быть минимум 6 символов",
-    loginError: "Ошибка входа. Проверьте backend и MongoDB",
-    registerError: "Ошибка регистрации. Проверьте backend и MongoDB",
+    loginError: "Не удалось выполнить вход. Попробуйте ещё раз.",
+    registerError: "Не удалось выполнить регистрацию. Попробуйте ещё раз.",
   },
 
   home: {
@@ -396,8 +396,9 @@ const ru = {
   avatarPicker: {
     title: "Выберите аватар",
     uploadPhoto: "Загрузить своё фото",
-    uploadHint: "JPG, PNG до 2 МБ",
-    maxSize: "Максимальный размер файла — 2 МБ",
+    uploadHint: "JPG, PNG до 8 МБ (сжимается автоматически)",
+    maxSize: "Максимальный размер файла — 8 МБ",
+    processingError: "Не удалось обработать изображение",
     currentSelection: "Текущий выбор",
     withInitials: "С инициалами",
     patterns: "Узоры",

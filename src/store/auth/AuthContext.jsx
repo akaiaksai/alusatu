@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
-import { getMe } from "../../api/auth.api";
+import { getMe, isLegacyLocalToken } from "../../api/auth.api";
 import { updateProfile as apiUpdateProfile } from "../../api/users.api";
 
 const AuthContext = createContext(null);
@@ -21,7 +21,6 @@ const readUser = () => {
 };
 
 const readToken = () => localStorage.getItem("token") || "";
-const LOCAL_TOKEN_PREFIX = "local-auth-token:";
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(readUser);
@@ -56,18 +55,22 @@ export const AuthProvider = ({ children }) => {
 
   const setAvatar = useCallback(async (src) => {
     const avatar = String(src || "");
-    if (tokenRef.current) {
-      const apiUser = await apiUpdateProfile({ avatar });
-      const savedAvatar = String(apiUser?.avatar || "");
-      if (savedAvatar !== avatar) {
-        const err = new Error("Avatar is not persisted by backend");
-        err.code = "AVATAR_NOT_PERSISTED";
-        throw err;
-      }
-      updateProfile(apiUser);
-    } else {
-      updateProfile({ avatar });
+    const activeToken = tokenRef.current;
+    if (!activeToken || isLegacyLocalToken(activeToken)) {
+      const err = new Error("Authentication required");
+      err.code = "AUTH_REQUIRED";
+      throw err;
     }
+
+    const apiUser = await apiUpdateProfile({ avatar });
+    const savedAvatar = String(apiUser?.avatar || "");
+    if (savedAvatar !== avatar) {
+      const err = new Error("Avatar is not persisted by backend");
+      err.code = "AVATAR_NOT_PERSISTED";
+      throw err;
+    }
+    updateProfile(apiUser);
+
     window.dispatchEvent(new Event("avatar:changed"));
   }, [updateProfile]);
 
@@ -79,6 +82,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (!token) return;
 
+    if (isLegacyLocalToken(token)) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("currentUser");
+      setToken("");
+      setUser(null);
+      return;
+    }
+
     getMe()
       .then((apiUser) => {
         const normalized = normalizeUser(apiUser);
@@ -89,7 +100,7 @@ export const AuthProvider = ({ children }) => {
       })
       .catch((err) => {
         const status = err?.response?.status;
-        if ((status === 401 || status === 403) && !token.startsWith(LOCAL_TOKEN_PREFIX)) {
+        if (status === 401 || status === 403) {
           localStorage.removeItem("token");
           localStorage.removeItem("currentUser");
           setToken("");
