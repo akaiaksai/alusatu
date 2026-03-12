@@ -80,6 +80,18 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    const onUnauthorized = () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("currentUser");
+      setToken("");
+      setUser(null);
+    };
+
+    window.addEventListener("auth:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", onUnauthorized);
+  }, []);
+
+  useEffect(() => {
     if (!token) return;
 
     if (isLegacyLocalToken(token)) {
@@ -108,6 +120,13 @@ export const AuthProvider = ({ children }) => {
         }
       });
   }, [token]);
+
+  useEffect(() => {
+    if (!token && user) {
+      localStorage.removeItem("currentUser");
+      setUser(null);
+    }
+  }, [token, user]);
 
   const avatarSrc = String(user?.avatar || "");
 

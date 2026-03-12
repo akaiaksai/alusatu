@@ -4,7 +4,6 @@ import { mockProducts } from "../../data/mockProducts";
 import styles from "./Product.module.css";
 import formatPrice from "../../utils/formatPrice";
 import {
-  addToCart as apiAddToCart,
   getListedProductById,
   getProductReviews,
   createProductReview,
@@ -126,7 +125,7 @@ const Product = () => {
   const touchRef = useRef(null);
 
   const toast = useToast();
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { addToCart } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
   const { t } = useTranslation();
@@ -758,7 +757,6 @@ const Product = () => {
                     toast(t("product.alreadyInCart"), "info");
                     return;
                   }
-                  try { if (token) { await apiAddToCart({ productId: product.id, name: product.name, price: product.price, image: product.image, quantity: qty }); } } catch { /* ignore */ }
                   toast(`${tp.name} ${t("product.addedToCart")}`, "success");
                   setQuantity(1);
                 }}
