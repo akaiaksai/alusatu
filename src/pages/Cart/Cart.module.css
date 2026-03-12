@@ -967,6 +967,10 @@
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
 }
 
+.pickupOptionActive:hover {
+  transform: translateY(-1px);
+}
+
 [data-theme="light"] .pickupOption {
   background: #fff;
   color: #111;
@@ -989,9 +993,15 @@
   color: rgba(255, 255, 255, 0.78);
 }
 
-[data-theme="light"] .pickupOption:hover {
+[data-theme="light"] .pickupOption:not(.pickupOptionActive):hover {
   background: #f5f5f5;
   border-color: #000;
+}
+
+[data-theme="light"] .pickupOptionActive:hover {
+  background: #111;
+  color: #fff;
+  border-color: #111;
 }
 
 .pickupDateOption {
