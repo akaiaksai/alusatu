@@ -455,6 +455,7 @@ const Cart = () => {
                     className={`${styles.deliveryBtn} ${deliveryMethod === "pickup" ? styles.deliveryBtnActive : ""}`}
                     onClick={() => setDeliveryMethod("pickup")}
                     type="button"
+                    aria-pressed={deliveryMethod === "pickup"}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                     {t("cart.selfPickup")}
@@ -463,6 +464,7 @@ const Cart = () => {
                     className={`${styles.deliveryBtn} ${deliveryMethod === "courier" ? styles.deliveryBtnActive : ""}`}
                     onClick={() => setDeliveryMethod("courier")}
                     type="button"
+                    aria-pressed={deliveryMethod === "courier"}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                     {t("cart.courierDelivery")}

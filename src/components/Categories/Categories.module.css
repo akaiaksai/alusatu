@@ -8,6 +8,30 @@
   color: var(--text-primary);
 }
 
+.currentSection {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 0.9rem;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.currentDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.currentText {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .btns {
   display: flex;
   gap: 8px;
@@ -26,12 +50,19 @@
   font-size: 0.9rem;
 }
 
+.categoryBtn[aria-pressed="false"] {
+  opacity: 0.76;
+}
+
 .categoryBtn:hover {
   transform: translateY(-2px);
+  opacity: 1;
 }
 
 .categoryBtn.active {
-  transform: scale(1.05);
+  transform: translateY(-1px) scale(1.03);
+  opacity: 1;
+  font-weight: 700;
 }
 
 [data-theme="dark"] .categoryBtn {
@@ -50,17 +81,17 @@
 }
 
 [data-theme="dark"] .categoryBtn.active {
-  background-color: #000;
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24), 0 2px 7px rgba(0, 0, 0, 0.2);
+  background-color: #fff;
+  color: #000;
+  border-color: #fff;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.26), 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="light"] .categoryBtn.active {
-  background: #fff;
-  color: #000;
-  border-color: rgba(0, 0, 0, 0.76);
-  box-shadow: 0 0 0 1px rgba(17, 17, 17, 0.16), 0 2px 8px rgba(17, 17, 17, 0.1);
+  background: #111;
+  color: #fff;
+  border-color: #111;
+  box-shadow: 0 0 0 1px rgba(17, 17, 17, 0.16), 0 4px 14px rgba(17, 17, 17, 0.18);
 }
 
 [data-theme="light"] .categoryBtn {
@@ -68,6 +99,18 @@
   color: #000;
   border-color: rgba(0, 0, 0, 0.7);
   box-shadow: 0 1px 5px rgba(17, 17, 17, 0.06);
+}
+
+[data-theme="dark"] .currentSection {
+  background: #000;
+  border-color: rgba(255, 255, 255, 0.52);
+  color: #fff;
+}
+
+[data-theme="light"] .currentSection {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.52);
+  color: #111;
 }
 
 [data-theme="light"] .categoryBtn:hover {

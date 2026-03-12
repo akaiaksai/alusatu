@@ -39,6 +39,7 @@ const Categories = ({ onFilter, selectedFilter }) => {
   const selected = typeof selectedFilter === "undefined"
     ? internalSelected
     : getCategoryKeyByFilter(selectedFilter);
+  const currentCategoryLabel = t(`categories.${selected}`);
 
   const handleSelect = (cat) => {
     if (typeof selectedFilter === "undefined") {
@@ -50,10 +51,16 @@ const Categories = ({ onFilter, selectedFilter }) => {
   return (
     <div className={styles.container}>
       <h3>{t("categories.title")}</h3>
+      <div className={styles.currentSection} aria-live="polite">
+        <span className={styles.currentDot} />
+        <span className={styles.currentText}>{currentCategoryLabel}</span>
+      </div>
       <div className={styles.btns}>
         {CATEGORY_KEYS.map((cat) => (
           <button
             key={cat.key}
+            type="button"
+            aria-pressed={selected === cat.key}
             className={`${styles.categoryBtn} ${selected === cat.key ? styles.active : ""}`}
             onClick={() => handleSelect(cat)}
           >
