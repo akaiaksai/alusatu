@@ -5,8 +5,17 @@ export async function getProfile() {
   return data.user;
 }
 
-export async function updateProfile({ username, email, phone, city }) {
-  const { data } = await api.put('/api/users/profile', { username, email, phone, city });
+export async function updateProfile(profile = {}) {
+  const { username, email, phone, city, avatar } = profile;
+  const payload = {};
+  if (username !== undefined) payload.username = username;
+  if (email !== undefined) payload.email = email;
+  if (phone !== undefined) payload.phone = phone;
+  if (city !== undefined) payload.city = city;
+  if (Object.prototype.hasOwnProperty.call(profile, 'avatar')) {
+    payload.avatar = avatar;
+  }
+  const { data } = await api.put('/api/users/profile', payload);
   return data.user;
 }
 

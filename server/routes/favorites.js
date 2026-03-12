@@ -1,7 +1,8 @@
 const router = require('express').Router();
-const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cache');
+
+const toComparableId = (value) => String(value ?? '').trim();
 
 router.get('/', requireAuth, cacheMiddleware(15), (req, res) => {
   res.json(req.user.favorites || []);
@@ -9,9 +10,14 @@ router.get('/', requireAuth, cacheMiddleware(15), (req, res) => {
 
 router.post('/', requireAuth, invalidateCache('/api/favorites'), async (req, res) => {
   try {
-    const { productId } = req.body;
+    const productId = toComparableId(req.body?.productId);
+    if (!productId) {
+      return res.status(400).json({ error: 'Некорректный productId' });
+    }
+
     const user = req.user;
-    if (!user.favorites.includes(productId)) {
+    const exists = (user.favorites || []).some((id) => toComparableId(id) === productId);
+    if (!exists) {
       user.favorites.push(productId);
       await user.save();
     }
@@ -23,9 +29,9 @@ router.post('/', requireAuth, invalidateCache('/api/favorites'), async (req, res
 
 router.delete('/:productId', requireAuth, invalidateCache('/api/favorites'), async (req, res) => {
   try {
-    const pid = Number(req.params.productId);
+    const pid = toComparableId(req.params.productId);
     const user = req.user;
-    user.favorites = user.favorites.filter(id => id !== pid);
+    user.favorites = (user.favorites || []).filter((id) => toComparableId(id) !== pid);
     await user.save();
     res.json(user.favorites);
   } catch (err) {

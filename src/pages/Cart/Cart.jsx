@@ -146,12 +146,6 @@ const Cart = () => {
         _fromApi: true,
       };
 
-      try {
-        const prev = JSON.parse(localStorage.getItem("orders") || "[]");
-        prev.push(order);
-        localStorage.setItem("orders", JSON.stringify(prev));
-      } catch { /* ignore */ }
-
       clearCart();
       window.dispatchEvent(new Event("orders:changed"));
       setReceipt(normalizeReceipt(order));

@@ -1,7 +1,8 @@
 const router = require('express').Router();
-const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cache');
+
+const toComparableId = (value) => String(value ?? '').trim();
 
 router.get('/', requireAuth, cacheMiddleware(15), (req, res) => {
   res.json(req.user.cart || []);
@@ -9,14 +10,20 @@ router.get('/', requireAuth, cacheMiddleware(15), (req, res) => {
 
 router.post('/', requireAuth, invalidateCache('/api/cart'), async (req, res) => {
   try {
-    const { productId, name, price, image, quantity } = req.body;
+    const { name, price, image } = req.body || {};
+    const productId = toComparableId(req.body?.productId);
+    const quantity = Number(req.body?.quantity) > 0 ? Number(req.body.quantity) : 1;
+    if (!productId) {
+      return res.status(400).json({ error: 'Некорректный productId' });
+    }
+
     const user = req.user;
-    const existing = user.cart.find(i => i.productId === productId);
+    const existing = (user.cart || []).find((i) => toComparableId(i.productId) === productId);
 
     if (existing) {
-      existing.quantity += (quantity || 1);
+      existing.quantity += quantity;
     } else {
-      user.cart.push({ productId, name, price, image, quantity: quantity || 1 });
+      user.cart.push({ productId, name, price, image, quantity });
     }
     await user.save();
     res.json(user.cart);
@@ -28,14 +35,18 @@ router.post('/', requireAuth, invalidateCache('/api/cart'), async (req, res) => 
 
 router.put('/:productId', requireAuth, invalidateCache('/api/cart'), async (req, res) => {
   try {
-    const pid = Number(req.params.productId) || req.params.productId;
-    const { quantity } = req.body;
+    const pid = toComparableId(req.params.productId);
+    const quantity = Number(req.body?.quantity);
     const user = req.user;
 
-    if (quantity <= 0) {
-      user.cart = user.cart.filter(i => i.productId !== pid);
+    if (!pid) {
+      return res.status(400).json({ error: 'Некорректный productId' });
+    }
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      user.cart = (user.cart || []).filter((i) => toComparableId(i.productId) !== pid);
     } else {
-      const item = user.cart.find(i => i.productId === pid);
+      const item = (user.cart || []).find((i) => toComparableId(i.productId) === pid);
       if (item) item.quantity = quantity;
     }
     await user.save();
@@ -47,9 +58,9 @@ router.put('/:productId', requireAuth, invalidateCache('/api/cart'), async (req,
 
 router.delete('/:productId', requireAuth, invalidateCache('/api/cart'), async (req, res) => {
   try {
-    const pid = Number(req.params.productId) || req.params.productId;
+    const pid = toComparableId(req.params.productId);
     const user = req.user;
-    user.cart = user.cart.filter(i => i.productId !== pid);
+    user.cart = (user.cart || []).filter((i) => toComparableId(i.productId) !== pid);
     await user.save();
     res.json(user.cart);
   } catch (err) {

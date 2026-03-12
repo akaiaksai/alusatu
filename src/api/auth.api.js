@@ -36,6 +36,7 @@ function toAuthUser(user) {
     isAdmin: !!user.isAdmin,
     phone: user.phone || '',
     city: user.city || '',
+    avatar: user.avatar || '',
     balance: Number(user.balance || 0),
   };
 }
@@ -75,6 +76,7 @@ function registerLocally({ username, email, password }) {
     isAdmin: normalizedUsername.toLowerCase() === 'admin',
     phone: '',
     city: '',
+    avatar: '',
     balance: 0,
     createdAt: new Date().toISOString(),
   };

@@ -29,6 +29,7 @@ const userSchema = new mongoose.Schema({
   },
   phone: { type: String, default: '' },
   city: { type: String, default: '' },
+  avatar: { type: String, default: '' },
   isAdmin: { type: Boolean, default: false },
   favorites: [{ type: mongoose.Schema.Types.Mixed }],
   cart: [{

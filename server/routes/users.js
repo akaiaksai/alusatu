@@ -30,7 +30,7 @@ router.get('/profile', requireAuth, cacheMiddleware(30), (req, res) => {
 
 router.put('/profile', requireAuth, invalidateCache('/api/users'), async (req, res) => {
   try {
-    const { username, email, phone, city } = req.body;
+    const { username, email, phone, city, avatar } = req.body;
     const user = req.user;
 
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
@@ -54,6 +54,13 @@ router.put('/profile', requireAuth, invalidateCache('/api/users'), async (req, r
 
     if (phone !== undefined) user.phone = String(phone || '').trim();
     if (city !== undefined) user.city = String(city || '').trim();
+    if (avatar !== undefined) {
+      const avatarValue = String(avatar || '').trim();
+      if (avatarValue.length > 3 * 1024 * 1024) {
+        return res.status(400).json({ error: 'Слишком большой размер аватара' });
+      }
+      user.avatar = avatarValue;
+    }
 
     await user.save();
     return res.json({ user: user.toSafe() });

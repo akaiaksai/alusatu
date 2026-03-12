@@ -292,9 +292,7 @@ function LoginForm({ onSuccess, onSwitchMode }) {
     try {
 
       const data = await loginUser({ credential, password });
-      const u = data.user;
-      const userData = { email: u.email, id: u._id, username: u.username, isAdmin: u.isAdmin };
-      onSuccess(userData, data.token);
+      onSuccess(data.user, data.token);
     } catch (apiErr) {
       const serverMsg = apiErr?.response?.data?.error;
       setError(serverMsg || t("auth.loginError"));
@@ -371,9 +369,7 @@ function RegisterForm({ onSuccess, onSwitchMode }) {
     try {
 
       const data = await registerUser({ username, email, password });
-      const u = data.user;
-      const userData = { email: u.email, id: u._id, username: u.username, isAdmin: u.isAdmin };
-      onSuccess(userData, data.token);
+      onSuccess(data.user, data.token);
     } catch (apiErr) {
       const serverMsg = apiErr?.response?.data?.error;
       setError(serverMsg || t("auth.registerError"));

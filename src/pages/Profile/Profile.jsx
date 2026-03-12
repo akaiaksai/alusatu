@@ -9,17 +9,9 @@ import { getProducts } from "../../api/products.api";
 import formatPrice, { formatKzt, toPriceKzt } from "../../utils/formatPrice";
 import { updateProfile as apiUpdateProfile, getMyOrders, getMyListedProducts, deleteListedProduct, getProfile, getOrderReceipt } from "../../api/users.api";
 import { logout as apiLogout } from "../../api/auth.api";
-import { useAuth } from "../../store";
+import { useAuth, useFavorites } from "../../store";
 import { topUpBalance, refundOrder } from "../../api/users.api";
 import { useTranslation } from "../../i18n";
-
-const FAVORITES_KEY = "favorites";
-
-const ls = (key, fallback = "[]") => {
-  try { return JSON.parse(localStorage.getItem(key) || fallback); }
-  catch { return JSON.parse(fallback); }
-};
-const save = (key, data) => localStorage.setItem(key, JSON.stringify(data));
 
 const fmtDate = (iso) => {
   try {
@@ -140,19 +132,20 @@ const Profile = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { user, token, avatarSrc, logout: authLogout, updateProfile: storeUpdateProfile, setAvatar } = useAuth();
+  const { favorites: favoriteIds } = useFavorites();
   const { t, lang } = useTranslation();
   const [tab, setTab] = useState("info");
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ username: "", email: "", phone: "" });
+  const [editForm, setEditForm] = useState({ username: "", email: "", phone: "", city: "" });
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const handleAvatarSelect = (src) => {
-    setAvatar(src);
+  const handleAvatarSelect = async (src) => {
+    await setAvatar(src);
     toast(t("profile.avatarUpdated"), "success");
   };
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [favoritesLoading, setFavoritesLoading] = useState(true);
-  const [orders, setOrders] = useState(() => ls("orders"));
-  const [myProducts, setMyProducts] = useState(() => ls("listedProducts"));
+  const [orders, setOrders] = useState([]);
+  const [myProducts, setMyProducts] = useState([]);
   const [balance, setBalance] = useState(user?.balance || 0);
   const [topUpAmount, setTopUpAmount] = useState(0);
   const [topUpLoading, setTopUpLoading] = useState(false);
@@ -184,129 +177,119 @@ const Profile = () => {
   }, []);
 
   const reload = useCallback(async () => {
-    let loadedOrders = [];
-
-    if (token) {
-
-      try {
-        const apiOrders = await getMyOrders();
-        loadedOrders = apiOrders.map(o => ({
-          id: o._id || o.id,
-          date: o.createdAt || o.date,
-          userId: o.userId,
-          username: o.username,
-          items: (o.items || []).map(i => ({ id: i.productId, name: i.name, price: i.price, quantity: i.quantity, image: i.image })),
-          total: o.total,
-          totalItems: o.totalItems,
-          status: o.status,
-          paidAt: o.paidAt || o.createdAt || "",
-          shippedAt: o.shippedAt || "",
-          deliveryDate: o.deliveryDate || "",
-          deliveredAt: o.deliveredAt || "",
-          pickupDate: o.pickupDate || '',
-          deliveryMethod: o.deliveryMethod || 'pickup',
-          deliveryAddress: o.deliveryAddress || '',
-          pickupAddress: o.pickupAddress || '',
-          receipt: o.receipt || null,
-          _fromApi: true,
-        }));
-      } catch {
-
-        loadedOrders = ls("orders");
-      }
-
-      try {
-        const apiProducts = await getMyListedProducts();
-        setMyProducts(apiProducts);
-      } catch {
-        setMyProducts(ls("listedProducts"));
-      }
-    } else {
-      loadedOrders = ls("orders");
-      setMyProducts(ls("listedProducts"));
+    if (!token) {
+      setOrders([]);
+      setMyProducts([]);
+      return;
     }
 
-    const localOrders = ls("orders");
-    const idSet = new Set(loadedOrders.map(o => String(o.id)));
-    for (const lo of localOrders) {
-      const lid = String(lo.id);
-      if (!idSet.has(lid)) {
-        loadedOrders.push(lo);
-        idSet.add(lid);
-      }
+    try {
+      const apiOrders = await getMyOrders();
+      setOrders(apiOrders.map((o) => ({
+        id: o._id || o.id,
+        date: o.createdAt || o.date,
+        userId: o.userId,
+        username: o.username,
+        items: (o.items || []).map((i) => ({ id: i.productId, name: i.name, price: i.price, quantity: i.quantity, image: i.image })),
+        total: o.total,
+        totalItems: o.totalItems,
+        status: o.status,
+        paidAt: o.paidAt || o.createdAt || "",
+        shippedAt: o.shippedAt || "",
+        deliveryDate: o.deliveryDate || "",
+        deliveredAt: o.deliveredAt || "",
+        pickupDate: o.pickupDate || "",
+        deliveryMethod: o.deliveryMethod || "pickup",
+        deliveryAddress: o.deliveryAddress || "",
+        pickupAddress: o.pickupAddress || "",
+        receipt: o.receipt || null,
+        _fromApi: true,
+      })));
+    } catch {
+      setOrders([]);
     }
 
-    setOrders(loadedOrders);
+    try {
+      const apiProducts = await getMyListedProducts();
+      setMyProducts(Array.isArray(apiProducts) ? apiProducts : []);
+    } catch {
+      setMyProducts([]);
+    }
   }, [token]);
 
   useEffect(() => {
     reload()
-    window.addEventListener("storage", reload);
     window.addEventListener("orders:changed", reload);
     window.addEventListener("myproducts:changed", reload);
     return () => {
-      window.removeEventListener("storage", reload);
       window.removeEventListener("orders:changed", reload);
       window.removeEventListener("myproducts:changed", reload);
     };
   }, [reload, token]);
-  const loadFavorites = async () => {
+
+  const loadFavorites = useCallback(async () => {
     setFavoritesLoading(true);
     try {
-      const ids = ls(FAVORITES_KEY);
-      const listed = ls("listedProducts");
+      const ids = Array.isArray(favoriteIds) ? favoriteIds.map((id) => String(id)) : [];
+      if (!ids.length) {
+        setFavoriteProducts([]);
+        return;
+      }
+
       let remote = [];
       try { remote = await getProducts({ limit: 200 }); } catch { remote = []; }
 
       const map = new Map();
-      (listed || []).forEach((p) => map.set(p.id, p));
-      (mockProducts || []).forEach((p) => map.set(p.id, p));
-      (remote || []).forEach((p) => map.set(p.id, p));
+      (myProducts || []).forEach((p) => map.set(String(p.id), p));
+      (mockProducts || []).forEach((p) => map.set(String(p.id), p));
+      (remote || []).forEach((p) => map.set(String(p.id), p));
 
-      const resolved = [];
-      for (const id of Array.isArray(ids) ? ids : []) {
-        const p = map.get(id);
-        if (p) resolved.push(p);
-      }
-      setFavoriteProducts(resolved);
+      setFavoriteProducts(ids.map((id) => map.get(String(id))).filter(Boolean));
     } catch { setFavoriteProducts([]); }
     finally { setFavoritesLoading(false); }
-  };
+  }, [favoriteIds, myProducts]);
 
   useEffect(() => {
     loadFavorites();
-    const h = () => loadFavorites();
-    window.addEventListener("favorites:changed", h);
-    window.addEventListener("myproducts:changed", h);
-    return () => {
-      window.removeEventListener("favorites:changed", h);
-      window.removeEventListener("myproducts:changed", h);
-    };
-  }, []);
+  }, [loadFavorites]);
   const startEdit = () => {
-    setEditForm({ username: user?.username || "", email: user?.email || "", phone: user?.phone || "" });
+    setEditForm({
+      username: user?.username || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+      city: user?.city || "",
+    });
     setEditing(true);
   };
 
   const saveEdit = async () => {
-    const updated = { ...user, username: editForm.username.trim(), email: editForm.email.trim(), phone: editForm.phone.trim() };
+    const updated = {
+      ...user,
+      username: editForm.username.trim(),
+      email: editForm.email.trim(),
+      phone: editForm.phone.trim(),
+      city: (editForm.city || "").trim(),
+    };
 
     try {
       if (token) {
-        const apiUser = await apiUpdateProfile({ username: updated.username, email: updated.email, phone: updated.phone });
+        const apiUser = await apiUpdateProfile({
+          username: updated.username,
+          email: updated.email,
+          phone: updated.phone,
+          city: updated.city,
+        });
         updated.username = apiUser.username;
         updated.email = apiUser.email;
         updated.phone = apiUser.phone;
+        updated.city = apiUser.city || "";
       }
-    } catch (err) {
-      console.warn("API profile update failed, saving locally", err);
+    } catch {
+      toast("Не удалось обновить профиль", "error");
+      return;
     }
 
     storeUpdateProfile(updated);
-
-    const users = ls("users");
-    const idx = users.findIndex((u) => u.id === updated.id);
-    if (idx >= 0) { users[idx] = { ...users[idx], ...updated }; save("users", users); }
 
     setEditing(false);
     toast(t("profile.profileUpdated"), "success");
@@ -324,21 +307,12 @@ const Profile = () => {
     } catch { /* ignore */ }
 
     const updated = myProducts.filter((p) => p.id !== id);
-    save("listedProducts", updated);
     setMyProducts(updated);
     window.dispatchEvent(new Event("myproducts:changed"));
     toast(t("profile.listingDeleted"), "success");
   };
-  const userOrders = user
-    ? orders.filter((o) => {
-        if (o._fromApi) return true
-        if (!o.userId) return true
-        const oid = String(o.userId);
-        const uid = String(user.id || user._id || "");
-        return oid === uid;
-      })
-    : [];
-  const kzt = (o, v) => o._fromApi ? v : toPriceKzt(v);
+  const userOrders = user ? orders : [];
+  const kzt = (o, v) => o?._fromApi ? v : toPriceKzt(v);
   const totalSpent = userOrders.reduce((s, o) => s + kzt(o, o.total || 0), 0);
   const totalBought = userOrders.reduce((s, o) => s + (o.totalItems || 0), 0);
   const initials = (user?.username || "?").slice(0, 2).toUpperCase();
@@ -555,6 +529,10 @@ const Profile = () => {
                   <div className={styles.value}>{user.phone || t("profile.phoneNotSet")}</div>
                 </div>
                 <div>
+                  <div className={styles.label}>City</div>
+                  <div className={styles.value}>{user.city || "—"}</div>
+                </div>
+                <div>
                   <div className={styles.label}>{t("profile.role")}</div>
                   <div className={styles.value}>{user.isAdmin ? t("profile.admin") : t("profile.userRole")}</div>
                 </div>
@@ -594,6 +572,15 @@ const Profile = () => {
                     placeholder={t("profile.phonePlaceholder")}
                     value={editForm.phone}
                     onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>City</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={editForm.city}
+                    onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
                   />
                 </div>
               </div>

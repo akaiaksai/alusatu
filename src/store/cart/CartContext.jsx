@@ -10,70 +10,89 @@ import {
 
 const CartContext = createContext(null);
 
-const readLocalCart = () => {
-  try { return JSON.parse(localStorage.getItem("cart") || "[]"); }
-  catch { return []; }
+const getCartStorageKey = (user) => {
+  const id = user?.id || user?._id;
+  return id ? `cart:${id}` : "cart:guest";
 };
 
-const saveLocal = (items) => localStorage.setItem("cart", JSON.stringify(items));
+const normalizeLocalItems = (items) => {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => ({
+      id: String(item?.id ?? item?.productId ?? "").trim(),
+      name: item?.name || "",
+      price: Number(item?.price || 0),
+      image: item?.image || "",
+      quantity: Number(item?.quantity) > 0 ? Number(item.quantity) : 1,
+    }))
+    .filter((item) => item.id);
+};
+
+const readLocalCartByKey = (key) => {
+  try {
+    const direct = localStorage.getItem(key);
+    if (direct != null) return normalizeLocalItems(JSON.parse(direct));
+    if (key === "cart:guest") {
+      return normalizeLocalItems(JSON.parse(localStorage.getItem("cart") || "[]"));
+    }
+    return [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalByKey = (key, items) => {
+  localStorage.setItem(key, JSON.stringify(items));
+  if (key === "cart:guest") {
+    localStorage.setItem("cart", JSON.stringify(items));
+  }
+};
+
 const calcCount = (items) => (items || []).reduce((s, i) => s + (i.quantity || 1), 0);
 
 const toClient = (serverItems) =>
   (serverItems || []).map((i) => ({
-    id: i.productId,
+    id: String(i.productId ?? "").trim(),
     name: i.name,
     price: i.price,
     image: i.image,
     quantity: i.quantity || 1,
-  }));
+  })).filter((i) => i.id);
 
 const isListedProductId = (id) => /^[a-f0-9]{24}$/i.test(String(id ?? ''));
 
 export const CartProvider = ({ children }) => {
   const { token, user } = useAuth();
-  const [cart, setCartState] = useState(readLocalCart);
-  const [cartCount, setCartCount] = useState(() => calcCount(readLocalCart()));
+  const storageKey = getCartStorageKey(user);
+  const [cart, setCartState] = useState(() => readLocalCartByKey(storageKey));
+  const [cartCount, setCartCount] = useState(() => calcCount(readLocalCartByKey(storageKey)));
   const tokenRef = useRef(token);
-  const loadedRef = useRef(false);
+  const storageKeyRef = useRef(storageKey);
+  const cartRef = useRef(cart);
 
   useEffect(() => { tokenRef.current = token; }, [token]);
+  useEffect(() => { storageKeyRef.current = storageKey; }, [storageKey]);
+  useEffect(() => { cartRef.current = cart; }, [cart]);
 
   const persist = useCallback((items) => {
-    saveLocal(items);
-    setCartState(items);
-    setCartCount(calcCount(items));
+    const normalized = normalizeLocalItems(items);
+    saveLocalByKey(storageKeyRef.current, normalized);
+    setCartState(normalized);
+    setCartCount(calcCount(normalized));
     window.dispatchEvent(new CustomEvent("cart:changed"));
   }, []);
 
   useEffect(() => {
-    if (!token) { loadedRef.current = false; return; }
-    if (loadedRef.current) return;
-    loadedRef.current = true;
+    const localItems = readLocalCartByKey(storageKey);
+    setCartState(localItems);
+    setCartCount(calcCount(localItems));
+
+    if (!token) return;
 
     apiGetCart()
-      .then((serverCart) => {
-        const serverItems = toClient(serverCart);
-        const localItems = readLocalCart();
-
-        const merged = [...serverItems];
-        const idSet = new Set(merged.map((i) => String(i.id)));
-
-        for (const local of localItems) {
-          if (!idSet.has(String(local.id))) {
-            merged.push(local);
-            apiAddToCart({
-              productId: local.id,
-              name: local.name,
-              price: local.price,
-              image: local.image,
-              quantity: local.quantity,
-            }).catch(() => {});
-          }
-        }
-        persist(merged);
-      })
+      .then((serverCart) => persist(toClient(serverCart)))
       .catch(() => {});
-  }, [token, persist]);
+  }, [storageKey, token, persist]);
 
   const addToCart = useCallback((product, qty = 1) => {
     const currentUserId = String(user?.id || user?._id || "");
@@ -82,80 +101,109 @@ export const CartProvider = ({ children }) => {
       return "OWN_PRODUCT";
     }
 
-    const items = readLocalCart();
-    const existing = items.find((i) => String(i.id) === String(product.id));
+    const current = [...(cartRef.current || [])];
+    const productId = String(product?.id ?? "").trim();
+    if (!productId) return;
+    const existing = current.find((i) => String(i.id) === productId);
+    const amount = Number(qty) > 0 ? Number(qty) : 1;
+    const previous = [...current];
 
-    if (isListedProductId(product.id)) {
+    if (isListedProductId(productId)) {
       if (existing) return "ALREADY_IN_CART";
-      items.push({ ...product, quantity: 1 });
+      current.push({ ...product, id: productId, quantity: 1 });
     } else if (existing) {
-      existing.quantity += qty;
+      existing.quantity += amount;
     } else {
-      items.push({ ...product, quantity: qty });
+      current.push({ ...product, id: productId, quantity: amount });
     }
-    persist(items);
+    persist(current);
 
     if (tokenRef.current) {
       apiAddToCart({
-        productId: product.id,
+        productId,
         name: product.name,
         price: product.price,
         image: product.image,
-        quantity: qty,
-      }).catch(() => {});
+        quantity: isListedProductId(productId) ? 1 : amount,
+      })
+        .then((serverCart) => persist(toClient(serverCart)))
+        .catch(() => persist(previous));
     }
   }, [persist, user?.id, user?._id]);
 
   const removeFromCart = useCallback((id) => {
-    persist(readLocalCart().filter((i) => String(i.id) !== String(id)));
-    if (tokenRef.current) apiRemoveFromCart(id).catch(() => {});
+    const sid = String(id);
+    const previous = [...(cartRef.current || [])];
+    persist(previous.filter((i) => String(i.id) !== sid));
+    if (tokenRef.current) {
+      apiRemoveFromCart(sid)
+        .then((serverCart) => persist(toClient(serverCart)))
+        .catch(() => persist(previous));
+    }
   }, [persist]);
 
   const updateQuantity = useCallback((id, qty) => {
+    const sid = String(id);
+    const previous = [...(cartRef.current || [])];
+
     if (qty <= 0) {
-      persist(readLocalCart().filter((i) => String(i.id) !== String(id)));
-      if (tokenRef.current) apiRemoveFromCart(id).catch(() => {});
+      persist(previous.filter((i) => String(i.id) !== sid));
+      if (tokenRef.current) {
+        apiRemoveFromCart(sid)
+          .then((serverCart) => persist(toClient(serverCart)))
+          .catch(() => persist(previous));
+      }
       return;
     }
-    const finalQty = isListedProductId(id) ? 1 : qty;
-    persist(readLocalCart().map((i) => String(i.id) === String(id) ? { ...i, quantity: finalQty } : i));
-    if (tokenRef.current) apiUpdateCartItem(id, finalQty).catch(() => {});
+    const finalQty = isListedProductId(sid) ? 1 : qty;
+    persist(previous.map((i) => String(i.id) === sid ? { ...i, quantity: finalQty } : i));
+    if (tokenRef.current) {
+      apiUpdateCartItem(sid, finalQty)
+        .then((serverCart) => persist(toClient(serverCart)))
+        .catch(() => persist(previous));
+    }
   }, [persist]);
 
   const clearCart = useCallback(() => {
+    const previous = [...(cartRef.current || [])];
     persist([]);
-    if (tokenRef.current) apiClearCart().catch(() => {});
+    if (tokenRef.current) {
+      apiClearCart()
+        .then((serverCart) => persist(toClient(serverCart)))
+        .catch(() => persist(previous));
+    }
   }, [persist]);
 
   const refreshCart = useCallback(() => {
     if (tokenRef.current) {
       apiGetCart()
         .then((serverCart) => {
-          const items = toClient(serverCart);
-          saveLocal(items);
-          setCartState(items);
-          setCartCount(calcCount(items));
+          persist(toClient(serverCart));
         })
         .catch(() => {
-          const items = readLocalCart();
+          const items = readLocalCartByKey(storageKeyRef.current);
           setCartState(items);
           setCartCount(calcCount(items));
         });
     } else {
-      const items = readLocalCart();
+      const items = readLocalCartByKey(storageKeyRef.current);
       setCartState(items);
       setCartCount(calcCount(items));
     }
-  }, []);
+  }, [persist]);
 
   useEffect(() => {
     const handler = () => {
-      const items = readLocalCart();
+      const items = readLocalCartByKey(storageKeyRef.current);
       setCartState(items);
       setCartCount(calcCount(items));
     };
     window.addEventListener("cart:changed", handler);
-    return () => window.removeEventListener("cart:changed", handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener("cart:changed", handler);
+      window.removeEventListener("storage", handler);
+    };
   }, []);
 
   return (
