@@ -37,6 +37,17 @@ const normalizeIds = (ids) => {
     .filter(Boolean);
 };
 
+const uniqueIds = (ids) => {
+  const out = [];
+  const seen = new Set();
+  for (const id of normalizeIds(ids)) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+};
+
 export const FavoritesProvider = ({ children }) => {
   const { token, user } = useAuth();
   const storageKey = getFavoritesStorageKey(user);
@@ -53,12 +64,16 @@ export const FavoritesProvider = ({ children }) => {
   const favCount = useMemo(() => {
     if (!favorites.length) return 0;
     if (!products.length) return 0;
-    const productIds = new Set(products.map((p) => String(p.id)));
+    const productIds = new Set(
+      products
+        .map((p) => String(p?.id ?? p?._id ?? "").trim())
+        .filter(Boolean)
+    );
     return favorites.filter((id) => productIds.has(String(id))).length;
   }, [favorites, products]);
 
   const sync = useCallback((ids) => {
-    const normalized = normalizeIds(ids);
+    const normalized = uniqueIds(ids);
     writeFavoritesByKey(storageKeyRef.current, normalized);
     setFavoritesState(normalized);
     window.dispatchEvent(new CustomEvent("favorites:changed"));
@@ -77,6 +92,7 @@ export const FavoritesProvider = ({ children }) => {
 
   const toggleFavorite = useCallback((id) => {
     const sid = String(id);
+    if (!sid.trim()) return false;
     const current = favoritesRef.current || [];
     const has = current.some((f) => String(f) === sid);
     const next = has
@@ -102,7 +118,9 @@ export const FavoritesProvider = ({ children }) => {
   }, [sync]);
 
   const isFavorite = useCallback((id) => {
-    return (favoritesRef.current || []).some((f) => String(f) === String(id));
+    const sid = String(id ?? "").trim();
+    if (!sid) return false;
+    return (favoritesRef.current || []).some((f) => String(f) === sid);
   }, []);
 
   const clearFavorites = useCallback(() => {
@@ -126,9 +144,13 @@ export const FavoritesProvider = ({ children }) => {
   }, [sync]);
 
   useEffect(() => {
-    const handler = () => refreshFavorites();
-    window.addEventListener("favorites:changed", handler);
-    return () => window.removeEventListener("favorites:changed", handler);
+    const onStorage = (e) => {
+      if (!e || !e.key || e.key === storageKeyRef.current || e.key === "favorites") {
+        refreshFavorites();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, [refreshFavorites]);
 
   return (

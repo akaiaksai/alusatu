@@ -219,17 +219,27 @@ const Profile = () => {
         receipt: o.receipt || null,
         _fromApi: true,
       })));
-    } catch {
-      setOrders([]);
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        authLogout();
+        setOrders([]);
+        setMyProducts([]);
+      }
     }
 
     try {
       const apiProducts = await getMyListedProducts();
       setMyProducts(Array.isArray(apiProducts) ? apiProducts : []);
-    } catch {
-      setMyProducts([]);
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        authLogout();
+        setOrders([]);
+        setMyProducts([]);
+      }
     }
-  }, [token]);
+  }, [token, authLogout]);
 
   useEffect(() => {
     reload()
@@ -350,16 +360,26 @@ const Profile = () => {
   }
 
   const handleTopUp = async () => {
-    if (!topUpAmount || topUpAmount <= 0) return toast(t("profile.topUpEnterAmount"), "error");
+    const amount = Math.floor(Number(topUpAmount));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return toast(t("profile.topUpEnterAmount"), "error");
+    }
     setTopUpLoading(true);
     try {
-      const { balance: newBalance } = await topUpBalance(topUpAmount);
+      const { balance: newBalance } = await topUpBalance(amount);
       setBalance(newBalance);
       storeUpdateProfile({ balance: newBalance });
       toast(t("profile.topUpSuccess"), "success");
       setTopUpAmount(0);
-    } catch {
-      toast(t("profile.topUpError"), "error");
+    } catch (err) {
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.error;
+      if (status === 401 || status === 403) {
+        authLogout();
+        toast("Сессия истекла. Войдите в аккаунт снова.", "error");
+      } else {
+        toast(msg || t("profile.topUpError"), "error");
+      }
     } finally {
       setTopUpLoading(false);
     }

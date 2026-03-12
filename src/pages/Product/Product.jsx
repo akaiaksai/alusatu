@@ -132,6 +132,7 @@ const Product = () => {
   const tp = product ? translateProduct(product, t) : null;
   const ownListingError = "Вы не можете купить собственное объявление";
   const currentUserId = String(user?.id || user?._id || "");
+  const currentProductId = String(product?.id ?? product?._id ?? id ?? "").trim();
   const ownerUserId = String(product?.userId || "");
   const isOwnListing = Boolean(currentUserId && ownerUserId && currentUserId === ownerUserId);
 
@@ -164,15 +165,20 @@ const Product = () => {
   }, [resetViewerTransform]);
 
   const checkFav = useCallback(() => {
-    setIsFav(isFavorite(id));
-  }, [id, isFavorite]);
+    setIsFav(isFavorite(currentProductId || id));
+  }, [currentProductId, id, isFavorite]);
 
   const toggleFav = () => {
     if (!user) {
       toast(t("product.loginForFavorite"), "error");
       return;
     }
-    const added = toggleFavorite(product?.id ?? id);
+    const favoriteId = String(product?.id ?? product?._id ?? id ?? "").trim();
+    if (!favoriteId) {
+      toast("Товар недоступен", "error");
+      return;
+    }
+    const added = toggleFavorite(favoriteId);
     setIsFav(added);
     if (added) toast(t("product.addedToFav"), "success");
     else toast(t("product.removedFromFav"), "info");
@@ -670,7 +676,7 @@ const Product = () => {
             {product.brand && <span className={styles.brand}>{product.brand}</span>}
             {/^[a-f0-9]{24}$/i.test(String(product?.id ?? "")) && !product.sold ? (
               <span className={styles.usedBadge}>USED</span>
-            ) : !product.sold && isNumericId(product.id) ? (
+            ) : !product.sold && isNumericId(currentProductId) ? (
               <span className={styles.newBadge}>NEW</span>
             ) : null}
           </div>
@@ -724,13 +730,13 @@ const Product = () => {
                 <button
                   className={styles.quantityBtn}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  disabled={quantity <= 1 || !isNumericId(product.id)}
+                  disabled={quantity <= 1 || !isNumericId(currentProductId)}
                 >-</button>
-                <span className={styles.quantityValue}>{!isNumericId(product.id) ? 1 : quantity}</span>
+                <span className={styles.quantityValue}>{!isNumericId(currentProductId) ? 1 : quantity}</span>
                 <button
                   className={styles.quantityBtn}
                   onClick={() => setQuantity((q) => product.stock != null ? Math.min(product.stock, q + 1) : q + 1)}
-                  disabled={(product.stock != null && quantity >= product.stock) || !isNumericId(product.id)}
+                  disabled={(product.stock != null && quantity >= product.stock) || !isNumericId(currentProductId)}
                 >+</button>
               </div>
             </div>
@@ -747,8 +753,12 @@ const Product = () => {
                     toast(ownListingError, "error");
                     return;
                   }
-                  const qty = !isNumericId(product.id) ? 1 : quantity;
-                  const result = addToCart(product, qty);
+                  const qty = !isNumericId(currentProductId) ? 1 : quantity;
+                  const result = addToCart({ ...product, id: currentProductId }, qty);
+                  if (result === "INVALID_PRODUCT") {
+                    toast("Товар недоступен", "error");
+                    return;
+                  }
                   if (result === "OWN_PRODUCT") {
                     toast(ownListingError, "error");
                     return;

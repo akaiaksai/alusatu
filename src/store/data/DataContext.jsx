@@ -8,9 +8,36 @@ const DataContext = createContext(null);
 const isPlaceholderImage = (url) =>
   /placeholder\.com|via\.placeholder\.com/i.test((url || "").toString());
 
+const normalizeProductShape = (product) => {
+  if (!product || typeof product !== "object") return null;
+
+  const idRaw = product.id ?? product._id ?? product.productId;
+  const id = String(idRaw ?? "").trim();
+  if (!id) return null;
+
+  const images = Array.isArray(product.images)
+    ? product.images.filter((img) => String(img || "").trim())
+    : [];
+  const image = String(product.image || images[0] || "").trim();
+
+  return {
+    ...product,
+    id,
+    _id: id,
+    name: product.name || product.title || "",
+    image,
+    images,
+    category: String(product.category || "").trim(),
+    price: Number(product.price || 0),
+    userId: product.userId ? String(product.userId) : "",
+  };
+};
+
 const dedupeProducts = (raw) => {
   const seenImages = new Set();
-  return raw.filter((p) => {
+  return raw
+    .map(normalizeProductShape)
+    .filter((p) => {
     if (!p) return false;
     const img = (p.image || "").toString();
     if (!img.trim() || isPlaceholderImage(img)) return false;
@@ -19,7 +46,7 @@ const dedupeProducts = (raw) => {
     if (!category) return false;
     seenImages.add(img);
     return true;
-  });
+    });
 };
 
 export const DataProvider = ({ children }) => {

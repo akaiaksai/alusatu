@@ -60,6 +60,7 @@ const toClient = (serverItems) =>
   })).filter((i) => i.id);
 
 const isListedProductId = (id) => /^[a-f0-9]{24}$/i.test(String(id ?? ''));
+const resolveProductId = (product) => String(product?.id ?? product?._id ?? product?.productId ?? "").trim();
 
 export const CartProvider = ({ children }) => {
   const { token, user } = useAuth();
@@ -96,34 +97,41 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = useCallback((product, qty = 1) => {
     const currentUserId = String(user?.id || user?._id || "");
-    const ownerUserId = String(product?.userId || "");
+    const ownerUserId = String(product?.userId || product?.ownerId || "");
     if (currentUserId && ownerUserId && currentUserId === ownerUserId) {
       return "OWN_PRODUCT";
     }
 
     const current = [...(cartRef.current || [])];
-    const productId = String(product?.id ?? "").trim();
-    if (!productId) return;
+    const productId = resolveProductId(product);
+    if (!productId) return "INVALID_PRODUCT";
     const existing = current.find((i) => String(i.id) === productId);
     const amount = Number(qty) > 0 ? Number(qty) : 1;
     const previous = [...current];
+    const normalizedItem = {
+      id: productId,
+      name: String(product?.name || product?.title || "").trim(),
+      price: Number(product?.price || 0),
+      image: String(product?.image || "").trim(),
+      quantity: isListedProductId(productId) ? 1 : amount,
+    };
 
     if (isListedProductId(productId)) {
       if (existing) return "ALREADY_IN_CART";
-      current.push({ ...product, id: productId, quantity: 1 });
+      current.push({ ...normalizedItem, quantity: 1 });
     } else if (existing) {
       existing.quantity += amount;
     } else {
-      current.push({ ...product, id: productId, quantity: amount });
+      current.push(normalizedItem);
     }
     persist(current);
 
     if (tokenRef.current) {
       apiAddToCart({
         productId,
-        name: product.name,
-        price: product.price,
-        image: product.image,
+        name: normalizedItem.name,
+        price: normalizedItem.price,
+        image: normalizedItem.image,
         quantity: isListedProductId(productId) ? 1 : amount,
       })
         .then((serverCart) => persist(toClient(serverCart)))

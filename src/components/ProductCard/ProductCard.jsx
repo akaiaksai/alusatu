@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import styles from "./ProductCard.module.css";
 import formatPrice from "../../utils/formatPrice";
@@ -44,12 +44,13 @@ const ProductCard = ({ product }) => {
   const { toggleFavorite, isFavorite } = useFavorites();
   const { t } = useTranslation();
   const tp = translateProduct(product, t);
+  const productId = String(product?.id ?? product?._id ?? product?.productId ?? "").trim();
   const isBannedImage =
     typeof product?.image === "string" &&
     (product.image.includes("/sparkle.png") || /placeholder\.com/.test(product.image));
 
   const [isHidden, setIsHidden] = useState(() => !product?.image || isBannedImage);
-  const [isFav, setIsFav] = useState(() => isFavorite(product?.id));
+  const [isFav, setIsFav] = useState(() => isFavorite(productId));
 
   const [imgSrc, setImgSrc] = useState(() => (isBannedImage ? "" : product.image));
   const [, setImgAttempt] = useState(0);
@@ -58,12 +59,20 @@ const ProductCard = ({ product }) => {
   const ownerUserId = String(product?.userId || "");
   const isOwnListing = Boolean(currentUserId && ownerUserId && currentUserId === ownerUserId);
 
+  useEffect(() => {
+    setIsFav(isFavorite(productId));
+  }, [isFavorite, productId]);
+
   const handleToggleFavorite = () => {
     if (!user) {
       toast(t("productCard.loginForFavorite"), "error");
       return;
     }
-    const added = toggleFavorite(product.id);
+    if (!productId) {
+      toast("Товар недоступен", "error");
+      return;
+    }
+    const added = toggleFavorite(productId);
     setIsFav(added);
     if (added) {
       toast(t("productCard.addedToFav"), "success");
@@ -86,6 +95,10 @@ const ProductCard = ({ product }) => {
       return;
     }
     const result = addToCart(product, 1);
+    if (result === "INVALID_PRODUCT") {
+      toast("Товар недоступен", "error");
+      return;
+    }
     if (result === "OWN_PRODUCT") {
       toast(ownListingError, "error");
       return;
@@ -119,7 +132,7 @@ const ProductCard = ({ product }) => {
 
   const discountPercent = product.discountPercentage ? Math.round(product.discountPercentage) : 0;
   const isNew = product.id && (typeof product.id === "number" ? product.id % 7 === 0 : false);
-  const isUsed = /^[a-f0-9]{24}$/i.test(String(product?.id ?? ""));
+  const isUsed = /^[a-f0-9]{24}$/i.test(productId);
 
   return (
     <div className={`${styles.card} card-reveal`}>
@@ -155,7 +168,7 @@ const ProductCard = ({ product }) => {
             <HeartIcon filled={isFav} />
           </button>
 
-          <Link to={`/product/${product.id}`} className={styles.overlayView} title={t("productCard.view")}>
+          <Link to={`/product/${productId || product.id}`} className={styles.overlayView} title={t("productCard.view")}>
             {t("productCard.view")}
           </Link>
 
@@ -206,7 +219,7 @@ const ProductCard = ({ product }) => {
       </div>
 
       <div className={styles.actionsBottom}>
-        <Link to={`/product/${product.id}`} className={styles.viewBtn} title={t("productCard.view")} aria-label={t("productCard.view")}>
+        <Link to={`/product/${productId || product.id}`} className={styles.viewBtn} title={t("productCard.view")} aria-label={t("productCard.view")}>
           {t("productCard.view")}
         </Link>
       </div>

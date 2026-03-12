@@ -39,7 +39,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 const PORT = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/alu-satu';
 
-const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 300);
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number.isFinite(RATE_LIMIT_MAX) && RATE_LIMIT_MAX > 0 ? RATE_LIMIT_MAX : 300,
+});
 app.use(limiter);
 
 app.use('/api/auth', authRoutes);
