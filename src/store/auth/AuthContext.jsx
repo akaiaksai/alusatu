@@ -57,12 +57,14 @@ export const AuthProvider = ({ children }) => {
   const setAvatar = useCallback(async (src) => {
     const avatar = String(src || "");
     if (tokenRef.current) {
-      try {
-        const apiUser = await apiUpdateProfile({ avatar });
-        updateProfile(apiUser);
-      } catch {
-        updateProfile({ avatar });
+      const apiUser = await apiUpdateProfile({ avatar });
+      const savedAvatar = String(apiUser?.avatar || "");
+      if (savedAvatar !== avatar) {
+        const err = new Error("Avatar is not persisted by backend");
+        err.code = "AVATAR_NOT_PERSISTED";
+        throw err;
       }
+      updateProfile(apiUser);
     } else {
       updateProfile({ avatar });
     }

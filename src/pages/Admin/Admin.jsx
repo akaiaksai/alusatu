@@ -27,9 +27,13 @@ const Admin = () => {
   const { t } = useTranslation();
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const adminInitials = (currentUser?.username || "AD").slice(0, 2).toUpperCase();
-  const handleAvatarSelect = (src) => {
-    setAvatar(src);
-    toast(t("admin.avatarUpdated"), "success");
+  const handleAvatarSelect = async (src) => {
+    try {
+      await setAvatar(src);
+      toast(t("admin.avatarUpdated"), "success");
+    } catch {
+      toast("Аватар не сохранился на сервере. Нужно обновить backend.", "error");
+    }
   };
   const [users, setUsers] = useState(() => ls("users"));
   const [products, setProducts] = useState(() => ls("listedProducts"));

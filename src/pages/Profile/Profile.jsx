@@ -139,8 +139,12 @@ const Profile = () => {
   const [editForm, setEditForm] = useState({ username: "", email: "", phone: "", city: "" });
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const handleAvatarSelect = async (src) => {
-    await setAvatar(src);
-    toast(t("profile.avatarUpdated"), "success");
+    try {
+      await setAvatar(src);
+      toast(t("profile.avatarUpdated"), "success");
+    } catch {
+      toast("Аватар не сохранился на сервере. Нужно обновить backend.", "error");
+    }
   };
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [favoritesLoading, setFavoritesLoading] = useState(true);
