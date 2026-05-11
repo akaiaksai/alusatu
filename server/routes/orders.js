@@ -357,4 +357,28 @@ router.put('/:id/status', requireAuth, requireAdmin, invalidateCache('/api/order
   }
 });
 
+router.delete('/:id', requireAuth, requireAdmin, invalidateCache('/api/orders'), async (req, res) => {
+  try {
+    const deletedOrder = await Order.findByIdAndDelete(req.params.id);
+    if (!deletedOrder) return res.status(404).json({ error: 'Order not found' });
+
+    await Receipt.deleteOne({ orderId: deletedOrder._id });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('delete order error:', err);
+    res.status(500).json({ error: 'Failed to delete order' });
+  }
+});
+
+router.delete('/', requireAuth, requireAdmin, invalidateCache('/api/orders'), async (_req, res) => {
+  try {
+    await Order.deleteMany({});
+    await Receipt.deleteMany({});
+    res.json({ success: true });
+  } catch (err) {
+    console.error('clear orders error:', err);
+    res.status(500).json({ error: 'Failed to clear orders' });
+  }
+});
+
 module.exports = router;

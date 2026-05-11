@@ -212,7 +212,6 @@
 
 .stat:hover {
   border-color: var(--border-light);
-  transform: translateY(-3px);
   box-shadow: 0 6px 18px rgba(0,0,0,0.2);
 }
 
@@ -247,18 +246,22 @@
   padding: 10px 20px;
   cursor: pointer;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   font-size: 0.88rem;
   font-weight: 600;
   color: #fff;
   border-radius: 8px;
-  transition: all 0.25s ease;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
   white-space: nowrap;
 }
 
 .tab:hover {
-  color: #fff !important;
-  background: #333;
+  background: transparent !important;
+  border-color: #fff;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
 }
 
 [data-theme="dark"] .tab {
@@ -267,15 +270,13 @@
 }
 
 [data-theme="dark"] .tab:hover {
-  color: #fff !important;
-  background: #333;
-    border: 1px solid #ffffff;
+  background: transparent !important;
+  border-color: #ffffff;
 }
 
 [data-theme="light"] .tab:hover {
-  color: #000 !important;
-  background: #e5e5e5;
-  border: 1px solid #000000;
+  background: transparent !important;
+  border-color: #000000;
 
 }
 
@@ -442,7 +443,6 @@
 
 .orderCard:hover {
   box-shadow: 0 6px 24px rgba(0,0,0,0.10);
-  transform: translateY(-2px);
   border-color: #d0d0d0;
 }
 
@@ -682,7 +682,6 @@
 .listingCard:hover {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
   border-color: #ccc;
-  transform: translateY(-2px);
 }
 
 .listingImg {

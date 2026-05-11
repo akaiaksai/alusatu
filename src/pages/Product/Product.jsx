@@ -27,16 +27,6 @@ const getTouchDistance = (touches) => {
   return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
 };
 
-const findListedProductById = (routeId) => {
-  try {
-    const raw = localStorage.getItem("listedProducts") || "[]";
-    const listed = JSON.parse(raw);
-    const rid = String(routeId);
-    return (listed || []).find((p) => String(p?.id) === rid) || null;
-  } catch {
-    return null;
-  }
-};
 const getInitials = (name) => {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/);
@@ -413,15 +403,6 @@ const Product = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const listed = findListedProductById(id);
-        if (listed) {
-          const listedImages = Array.isArray(listed.images) && listed.images.length
-            ? listed.images
-            : [listed.image].filter(Boolean);
-          if (mounted) { setProduct(listed); setImages(listedImages); }
-          return;
-        }
-
         if (!isNumericId(id)) {
           try {
             const listedApi = await getListedProductById(id);
@@ -1050,4 +1031,3 @@ const Product = () => {
 };
 
 export default Product;
-

@@ -88,4 +88,29 @@ router.delete('/:id', requireAuth, requireAdmin, invalidateCache('/api/users'), 
   }
 });
 
+router.put('/:id/role', requireAuth, requireAdmin, invalidateCache('/api/users'), async (req, res) => {
+  try {
+    const { isAdmin } = req.body || {};
+    if (typeof isAdmin !== 'boolean') {
+      return res.status(400).json({ error: 'Invalid role payload' });
+    }
+
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (String(targetUser._id) === String(req.user._id) && isAdmin === false) {
+      return res.status(400).json({ error: 'You cannot remove your own admin access' });
+    }
+
+    targetUser.isAdmin = isAdmin;
+    await targetUser.save();
+    return res.json({ user: targetUser.toSafe() });
+  } catch (err) {
+    console.error('update role error:', err);
+    return res.status(500).json({ error: 'Failed to update user role' });
+  }
+});
+
 module.exports = router;

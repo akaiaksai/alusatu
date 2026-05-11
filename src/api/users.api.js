@@ -28,6 +28,11 @@ export async function deleteUser(id) {
   await api.delete(`/api/users/${id}`);
 }
 
+export async function updateUserRole(id, isAdmin) {
+  const { data } = await api.put(`/api/users/${id}/role`, { isAdmin });
+  return data.user;
+}
+
 export async function getCart() {
   const { data } = await api.get('/api/cart');
   return data
@@ -85,6 +90,16 @@ export async function getOrderReceipt(orderId) {
 
 export async function getAllOrders() {
   const { data } = await api.get('/api/orders/all');
+  return data;
+}
+
+export async function deleteOrder(id) {
+  const { data } = await api.delete(`/api/orders/${id}`);
+  return data;
+}
+
+export async function clearAllOrders() {
+  const { data } = await api.delete('/api/orders');
   return data;
 }
 

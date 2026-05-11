@@ -7,25 +7,9 @@ import { useTranslation } from "../../i18n";
 
 const categories = ["Телефоны", "Ноутбуки", "Одежда", "Обувь", "Часы", "Сумки", "Аксессуары", "Электроника", "Дом и сад"];
 
-const LISTED_PRODUCTS_KEY = "listedProducts";
-
-const readListedProducts = () => {
-  try {
-    const raw = localStorage.getItem(LISTED_PRODUCTS_KEY) || "[]";
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveListedProducts = (items) => {
-  localStorage.setItem(LISTED_PRODUCTS_KEY, JSON.stringify(items));
-};
-
 const Sell = () => {
   const navigate = useNavigate();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
@@ -92,43 +76,7 @@ const Sell = () => {
         images,
       };
 
-      let product = null;
-      let apiError = null;
-
-      try {
-        product = await createListedProduct(payload);
-      } catch (err) {
-        apiError = err;
-        console.error("API create failed", err);
-      }
-
-      if (!product) {
-        const localProduct = {
-          id: `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-          name: payload.title,
-          title: payload.title,
-          price: payload.price,
-          category: payload.category,
-          description: payload.description,
-          image: payload.images[0] || "",
-          images: payload.images,
-          userId: user?.id || user?._id || "local-user",
-          username: user?.username || "User",
-          sold: false,
-          createdAt: new Date().toISOString(),
-        };
-
-        const listed = readListedProducts();
-        listed.unshift(localProduct);
-        saveListedProducts(listed);
-        product = localProduct;
-
-        if (apiError) {
-          const details = apiError?.response?.data?.error || apiError?.message || "API unavailable";
-          console.warn("Saved listing locally after API failure:", details);
-        }
-      }
-
+      const product = await createListedProduct(payload);
       if (!product) throw new Error("No product returned from API");
 
       setMsgType("success");

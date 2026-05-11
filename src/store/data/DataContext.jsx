@@ -80,14 +80,7 @@ export const DataProvider = ({ children }) => {
         listedApi = [];
       }
 
-      let listed = [];
-      try {
-        listed = JSON.parse(localStorage.getItem("listedProducts") || "[]");
-      } catch {
-        listed = [];
-      }
-
-      let raw = [...data, ...listedApi, ...listed];
+      let raw = [...data, ...listedApi];
       if (!raw.length) raw = mockProducts;
 
       const valid = dedupeProducts(raw);
